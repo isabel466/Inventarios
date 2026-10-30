@@ -2,7 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
 import { useNetwork } from '../../context/NetworkContext.jsx';
-import { Database, RefreshCw, Wifi, WifiOff, CheckCircle2, Server, Eye } from 'lucide-react';
+import {
+  CloudSync,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  CheckCircle2,
+  Server,
+  Eye,
+  SlidersHorizontal,
+  Clock,
+  Database,
+  ArrowRight,
+  X
+} from 'lucide-react';
 
 export default function SyncMonitor() {
   const {
@@ -45,16 +58,19 @@ export default function SyncMonitor() {
   };
 
   return (
-    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* HEADER MONITOREO */}
-      <div className="glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="corporate-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Database color="var(--accent-cyan)" size={24} /> Motor de Sincronización & Cola Offline
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Supervisa en tiempo real las escrituras en IndexedDB y el envío batch al backend.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CloudSync color="var(--accent-primary)" size={20} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Motor de Sincronización Cloud y Cola Offline
+            </h2>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Control transaccional entre IndexedDB (Client-side) y el Servidor API REST (Backend).
           </p>
         </div>
 
@@ -62,63 +78,71 @@ export default function SyncMonitor() {
           className={`btn ${pendingSalesCount > 0 ? 'btn-primary' : 'btn-secondary'}`}
           onClick={triggerManualSync}
           disabled={isSyncing || !isOnline}
-          style={{ padding: '10px 20px', fontSize: '0.95rem' }}
+          style={{ padding: '9px 18px', fontSize: '0.875rem' }}
         >
-          <RefreshCw size={18} className={isSyncing ? 'spin-anim' : ''} />
-          {isSyncing ? 'Sincronizando Lote...' : `Sincronizar Pendientes (${pendingSalesCount})`}
+          <RefreshCw size={15} className={isSyncing ? 'spin-anim' : ''} />
+          <span>{isSyncing ? 'Sincronizando por lote...' : `Sincronizar Lote (${pendingSalesCount})`}</span>
         </button>
       </div>
 
       {/* STATUS TARJETAS RED & SERVIDOR */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
         
-        {/* NETWORK SIMULATOR CONTROL */}
-        <div className="glass-panel" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isOnline ? <Wifi color="var(--accent-emerald)" size={18} /> : <WifiOff color="var(--accent-rose)" size={18} />}
-            Estado Conexión de Red
-          </h3>
+        {/* NETWORK STATUS */}
+        <div className="corporate-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isOnline ? <Wifi color="var(--accent-emerald)" size={16} /> : <WifiOff color="var(--accent-rose)" size={16} />}
+              Estado de Red y Conectividad
+            </h3>
+            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
+              {isOnline ? 'En Línea' : 'Sin Conexión'}
+            </span>
+          </div>
 
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-            Estado actual: <strong style={{ color: isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>{isOnline ? 'ONLINE (Conectado)' : 'OFFLINE (Almacenando localmente)'}</strong>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            {isOnline
+              ? 'Las transacciones registradas se envían automáticamente al servidor central.'
+              : 'Modo seguro offline: las ventas se almacenan localmente en IndexedDB.'}
           </p>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('auto')} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-              Auto
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('auto')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
+              Automático
             </button>
-            <button className={`btn ${simulationMode === 'force_online' ? 'btn-success' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_online')} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-              <Wifi size={14} /> Forzar Online
+            <button className={`btn ${simulationMode === 'force_online' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_online')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
+              Forzar Online
             </button>
-            <button className={`btn ${simulationMode === 'force_offline' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_offline')} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-              <WifiOff size={14} /> Forzar Offline
+            <button className={`btn ${simulationMode === 'force_offline' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_offline')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
+              Forzar Offline
             </button>
           </div>
         </div>
 
         {/* SERVER HEALTH */}
-        <div className="glass-panel" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Server color="var(--accent-cyan)" size={18} /> Servidor Backend Express
-          </h3>
+        <div className="corporate-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Server color="var(--accent-primary)" size={16} />
+              Servidor API Backend (Express)
+            </h3>
+            <span className={`badge ${serverStats ? 'badge-online' : 'badge-offline'}`}>
+              {serverStats ? 'Activo (Puerto 3001)' : 'Desconectado'}
+            </span>
+          </div>
 
           {serverStats ? (
-            <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--accent-emerald)', marginBottom: '6px', fontWeight: 600 }}>
-                🟢 Servidor activo en http://localhost:3001
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              <p style={{ marginBottom: '6px' }}>
+                Ventas consolidadas en backend: <strong style={{ color: 'var(--text-main)' }}>{serverStats.totalVentasServidor}</strong>
               </p>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Ventas en BD Servidor: <strong>{serverStats.totalVentasServidor}</strong> • Catálogo: <strong>{serverStats.productosTotal}</strong> productos
+              <p>
+                Catálogo central: <strong style={{ color: 'var(--text-main)' }}>{serverStats.productosTotal}</strong> artículos sincronizados
               </p>
             </div>
           ) : (
-            <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--accent-rose)', fontWeight: 600 }}>
-                🔴 Servidor Backend No Disponible / Desconectado
-              </p>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Las ventas se mantendrán seguras en IndexedDB hasta restablecer el servidor.
-              </p>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              El servidor en <code>http://localhost:3001</code> no responde. Las transacciones se preservarán intactas en IndexedDB.
             </div>
           )}
         </div>
@@ -126,41 +150,55 @@ export default function SyncMonitor() {
       </div>
 
       {/* TABLA DE VENTAS PENDIENTES EN COLA */}
-      <div className="glass-panel" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          ⏳ Cola de Transacciones Pendientes en IndexedDB ({pendingSales.length})
-        </h3>
+      <div className="corporate-panel" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={16} color="var(--accent-amber)" />
+            Cola de Transacciones Pendientes en IndexedDB ({pendingSales.length})
+          </h3>
+          <span className="badge badge-warning">syncStatus = 0</span>
+        </div>
 
         {pendingSales.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>
-            🎉 No hay transacciones pendientes por sincronizar. Toda la información local coincide con el servidor.
+          <div style={{
+            textAlign: 'center',
+            padding: '36px',
+            color: 'var(--text-muted)',
+            backgroundColor: 'var(--bg-subtle)',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px dashed var(--border-color)',
+            fontSize: '0.85rem'
+          }}>
+            <CheckCircle2 size={24} color="var(--accent-emerald)" style={{ marginBottom: '8px', display: 'inline-block' }} />
+            <p style={{ fontWeight: 500, color: 'var(--text-main)' }}>No hay ventas pendientes por sincronizar</p>
+            <p style={{ fontSize: '0.75rem' }}>Todas las transacciones locales coinciden con el servidor central.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+          <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px' }}>ID UUID Cliente</th>
-                  <th style={{ padding: '10px' }}>Fecha Registro</th>
-                  <th style={{ padding: '10px' }}>Cliente</th>
-                  <th style={{ padding: '10px' }}>Monto Total</th>
-                  <th style={{ padding: '10px' }}>Estado Sync</th>
-                  <th style={{ padding: '10px', textAlign: 'right' }}>Payload</th>
+                <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Folio UUID Cliente</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Fecha Local</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Cliente</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Monto</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Estado</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Detalle</th>
                 </tr>
               </thead>
               <tbody>
                 {pendingSales.map((v) => (
-                  <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '10px', fontFamily: 'monospace', color: 'var(--accent-amber)' }}>{v.id}</td>
-                    <td style={{ padding: '10px' }}>{new Date(v.fecha).toLocaleString()}</td>
-                    <td style={{ padding: '10px' }}>{v.clienteNombre}</td>
-                    <td style={{ padding: '10px', fontWeight: 700 }}>${v.total.toFixed(2)}</td>
-                    <td style={{ padding: '10px' }}>
-                      <span className="badge badge-warning">syncStatus: 0 (PENDIENTE)</span>
+                  <tr key={v.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: '#ffffff' }}>
+                    <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{v.id}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{new Date(v.fecha).toLocaleString()}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 500 }}>{v.clienteNombre}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text-main)' }}>${v.total.toFixed(2)}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span className="badge badge-warning">En Cola (Local)</span>
                     </td>
-                    <td style={{ padding: '10px', textAlign: 'right' }}>
-                      <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => viewSalePayload(v)}>
-                        <Eye size={12} /> Ver JSON
+                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                      <button className="btn btn-secondary" style={{ padding: '3px 8px', fontSize: '0.75rem' }} onClick={() => viewSalePayload(v)}>
+                        <Eye size={12} /> Payload
                       </button>
                     </td>
                   </tr>
@@ -171,35 +209,44 @@ export default function SyncMonitor() {
         )}
       </div>
 
-      {/* TABLA DE VENTAS YA SINCRONIZADAS RECIENTEMENTE */}
-      <div className="glass-panel" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CheckCircle2 color="var(--accent-emerald)" size={20} /> Historial Reciente de Ventas Sincronizadas
+      {/* HISTORIAL RECIENTE SINCRONIZADAS */}
+      <div className="corporate-panel" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 color="var(--accent-emerald)" size={16} />
+          Historial Reciente de Ventas Confirmadas por el Servidor
         </h3>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '10px' }}>UUID Venta</th>
-                <th style={{ padding: '10px' }}>Fecha</th>
-                <th style={{ padding: '10px' }}>Cliente</th>
-                <th style={{ padding: '10px' }}>Total</th>
-                <th style={{ padding: '10px' }}>Estado</th>
+              <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>UUID Venta</th>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Fecha</th>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Cliente</th>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Total</th>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {syncedSales.map((v) => (
-                <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: '10px', fontFamily: 'monospace', color: 'var(--accent-cyan)' }}>{v.id}</td>
-                  <td style={{ padding: '10px' }}>{new Date(v.fecha).toLocaleString()}</td>
-                  <td style={{ padding: '10px' }}>{v.clienteNombre}</td>
-                  <td style={{ padding: '10px', fontWeight: 700 }}>${v.total.toFixed(2)}</td>
-                  <td style={{ padding: '10px' }}>
-                    <span className="badge badge-online">syncStatus: 1 (OK)</span>
+              {syncedSales.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No hay ventas sincronizadas registradas en esta sesión.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                syncedSales.map((v) => (
+                  <tr key={v.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: '#ffffff' }}>
+                    <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{v.id}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{new Date(v.fecha).toLocaleString()}</td>
+                    <td style={{ padding: '10px 14px' }}>{v.clienteNombre}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-main)' }}>${v.total.toFixed(2)}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span className="badge badge-online">syncStatus = 1 (OK)</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -207,14 +254,52 @@ export default function SyncMonitor() {
 
       {/* MODAL VER JSON PAYLOAD */}
       {selectedSaleDetail && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '24px' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Payload JSON enviado al Backend</h3>
-            <pre style={{ backgroundColor: '#090d16', padding: '14px', borderRadius: '8px', color: '#38bdf8', fontSize: '0.8rem', overflowX: 'auto', maxHeight: '300px' }}>
-              {JSON.stringify(selectedSaleDetail, null, 2)}
-            </pre>
-            <div style={{ marginTop: '16px', textAlign: 'right' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedSaleDetail(null)}>Cerrar</button>
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '540px',
+            backgroundColor: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-modal)'
+          }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)' }}>Payload Batch JSON</h3>
+              <button className="btn btn-secondary" style={{ padding: '4px 8px' }} onClick={() => setSelectedSaleDetail(null)}>
+                <X size={15} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '16px' }}>
+              <pre style={{
+                backgroundColor: '#0f172a',
+                padding: '14px',
+                borderRadius: 'var(--radius-sm)',
+                color: '#38bdf8',
+                fontSize: '0.78rem',
+                fontFamily: 'var(--font-mono)',
+                overflowX: 'auto',
+                maxHeight: '320px'
+              }}>
+                {JSON.stringify(selectedSaleDetail, null, 2)}
+              </pre>
+            </div>
+
+            <div style={{ padding: '12px 18px', backgroundColor: 'var(--bg-subtle)', borderTop: '1px solid var(--border-color)', textAlign: 'right' }}>
+              <button className="btn btn-primary" onClick={() => setSelectedSaleDetail(null)}>
+                Entendido
+              </button>
             </div>
           </div>
         </div>

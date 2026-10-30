@@ -1,16 +1,17 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const ProjectModeContext = createContext();
 
 export const ProjectModeProvider = ({ children }) => {
-  // Fijo al 50% de avance para la entrega de hito intermedio
-  const isAvanceMode = true;
+  // Avance activo: false = versión completa con todos los módulos desbloqueados
+  const [isAvanceMode, setIsAvanceMode] = useState(false);
 
   return (
     <ProjectModeContext.Provider
       value={{
         isAvanceMode,
-        progressPercentage: 50
+        setIsAvanceMode,
+        progressPercentage: isAvanceMode ? 50 : 100
       }}
     >
       {children}

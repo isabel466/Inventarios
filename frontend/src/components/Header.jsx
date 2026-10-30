@@ -2,7 +2,18 @@ import React, { useState } from 'react';
 import { useNetwork } from '../context/NetworkContext.jsx';
 import { useAuth, DEFAULT_USERS } from '../context/AuthContext.jsx';
 import { useProjectMode } from '../context/ProjectModeContext.jsx';
-import { Wifi, WifiOff, RefreshCw, Bell, Shield, User, LogOut, CheckCircle2 } from 'lucide-react';
+import {
+  Store,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Bell,
+  CheckCircle2,
+  ChevronDown,
+  Layers,
+  SlidersHorizontal,
+  UserCheck
+} from 'lucide-react';
 
 export default function Header() {
   const {
@@ -16,80 +27,113 @@ export default function Header() {
     requestNotificationPermission
   } = useNetwork();
 
-  const { user, switchUserRole, logout } = useAuth();
+  const { user, switchUserRole } = useAuth();
   const { isAvanceMode } = useProjectMode();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [showNetworkSettings, setShowNetworkSettings] = useState(false);
+
+  // Initial letter for corporate avatar
+  const userInitials = user?.nombre
+    ? user.nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'US';
 
   return (
-    <header className="glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, padding: '12px 24px' }}>
+    <header style={{
+      backgroundColor: '#ffffff',
+      borderBottom: '1px solid var(--border-color)',
+      padding: '12px 24px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+      boxShadow: 'var(--shadow-xs)'
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         
-        {/* LOGO & TITLE */}
+        {/* LOGO & BRAND IDENTITY */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: isAvanceMode ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+            width: '38px',
+            height: '38px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--accent-primary)',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 'bold',
-            fontSize: '1.4rem',
-            color: '#fff',
-            boxShadow: isAvanceMode ? '0 0 15px rgba(245, 158, 11, 0.4)' : '0 0 15px rgba(6, 182, 212, 0.4)'
+            boxShadow: 'var(--shadow-xs)'
           }}>
-            {isAvanceMode ? '📊' : '⚡'}
+            <Store size={20} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, background: 'linear-gradient(90deg, #f8fafc, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              POS & Inventario{' '}
-              {isAvanceMode ? (
-                <span style={{ fontSize: '0.75rem', background: '#f59e0b', color: '#000', padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', fontWeight: 800 }}>
-                  Avance 50% (Hito 1)
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.75rem', background: '#06b6d4', color: '#000', padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', fontWeight: 800 }}>
-                  Versión Final 100%
-                </span>
-              )}
-            </h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {isAvanceMode ? 'Hito 1: UI & Base de Datos Client-Side en IndexedDB (Dexie.js)' : 'Base de Datos: IndexedDB (Dexie) • Sincronización Automática Batch'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+                Inventario & POS
+              </h1>
+              <span className="badge badge-neutral" style={{ fontSize: '0.7rem', fontWeight: 600 }}>
+                Enterprise Offline-First
+              </span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Almacenamiento Local IndexedDB • Sincronización en Red
             </p>
           </div>
         </div>
 
-        {/* CONTROLES DE ESTADO DE RED & SIMULADOR */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        {/* ACTIONS & NETWORK STATUS */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           
-          {/* SIMULADOR DE RED */}
-          <div className="glass-card" style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingLeft: '4px' }}>Simular Red:</span>
+          {/* SIMULADOR DE RED DISCRETO (HERRAMIENTA DE PRUEBA) */}
+          <div style={{ position: 'relative' }}>
             <button
-              className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
-              onClick={() => setSimulationMode('auto')}
-              title="Usar estado de red real del navegador"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--text-muted)' }}
+              onClick={() => setShowNetworkSettings(!showNetworkSettings)}
+              title="Ajustes de simulación de red"
             >
-              Auto
+              <SlidersHorizontal size={14} />
+              <span>Red: {simulationMode === 'auto' ? 'Automática' : simulationMode === 'force_online' ? 'Online (Forzado)' : 'Offline (Simulado)'}</span>
+              <ChevronDown size={12} />
             </button>
-            <button
-              className={`btn ${simulationMode === 'force_online' ? 'btn-success' : 'btn-secondary'}`}
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
-              onClick={() => setSimulationMode('force_online')}
-              title="Forzar estado Online"
-            >
-              <Wifi size={12} /> Online
-            </button>
-            <button
-              className={`btn ${simulationMode === 'force_offline' ? 'btn-danger' : 'btn-secondary'}`}
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
-              onClick={() => setSimulationMode('force_offline')}
-              title="Forzar estado Offline (Probar transacciones sin conexión)"
-            >
-              <WifiOff size={12} /> Offline
-            </button>
+
+            {showNetworkSettings && (
+              <div className="corporate-panel" style={{
+                position: 'absolute',
+                right: 0,
+                top: '115%',
+                zIndex: 50,
+                width: '230px',
+                padding: '8px',
+                boxShadow: 'var(--shadow-lg)'
+              }}>
+                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Simulador de Conectividad</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Para evaluar comportamiento offline</p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <button
+                    className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
+                    onClick={() => { setSimulationMode('auto'); setShowNetworkSettings(false); }}
+                  >
+                    ● Automático (Estado real del navegador)
+                  </button>
+                  <button
+                    className={`btn ${simulationMode === 'force_online' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
+                    onClick={() => { setSimulationMode('force_online'); setShowNetworkSettings(false); }}
+                  >
+                    <Wifi size={13} color="var(--accent-emerald)" /> Forzar Online
+                  </button>
+                  <button
+                    className={`btn ${simulationMode === 'force_offline' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
+                    onClick={() => { setSimulationMode('force_offline'); setShowNetworkSettings(false); }}
+                  >
+                    <WifiOff size={13} color="var(--accent-rose)" /> Forzar Offline (Sin internet)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* BADGE NETWORK STATUS */}
@@ -97,34 +141,37 @@ export default function Header() {
             <span className={`pulse-dot ${isOnline ? 'online' : 'offline'}`} />
             {isOnline ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Wifi size={14} /> ONLINE
+                <Wifi size={13} /> Conectado
               </span>
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <WifiOff size={14} /> OFFLINE
+                <WifiOff size={13} /> Sin Conexión
               </span>
             )}
           </div>
 
-          {/* COLA DE VENTAS PENDIENTES LOCALES EN INDEXEDDB */}
-          <div
-            className="badge badge-warning"
-            style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-            title="Transacciones guardadas localmente en IndexedDB"
+          {/* COLA LOCAL & BOTÓN DE SINCRONIZACIÓN */}
+          <button
+            className={`btn ${pendingSalesCount > 0 ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={triggerManualSync}
+            disabled={isSyncing || !isOnline}
+            style={{ fontSize: '0.8125rem', padding: '6px 12px' }}
+            title={pendingSalesCount > 0 ? "Enviar transacciones pendientes al servidor central" : "No hay transacciones pendientes"}
           >
-            <RefreshCw size={14} />
-            <span>Cola Local ({pendingSalesCount})</span>
-          </div>
+            <RefreshCw size={13} className={isSyncing ? 'spin-anim' : ''} />
+            <span>Sincronizar {pendingSalesCount > 0 && `(${pendingSalesCount})`}</span>
+          </button>
 
           {/* NOTIFICACIONES WEB */}
           {notificationPermission !== 'granted' && (
             <button
               className="btn btn-outline"
-              style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+              style={{ fontSize: '0.8rem', padding: '6px 10px' }}
               onClick={requestNotificationPermission}
-              title="Activar alertas nativas de stock bajo"
+              title="Habilitar alertas nativas de stock bajo"
             >
-              <Bell size={14} /> Activar Alertas
+              <Bell size={13} />
+              <span>Alertas</span>
             </button>
           )}
 
@@ -133,52 +180,90 @@ export default function Header() {
             <button
               className="btn btn-secondary"
               onClick={() => setShowRoleMenu(!showRoleMenu)}
-              style={{ padding: '6px 12px', fontSize: '0.85rem', borderColor: 'var(--accent-cyan)' }}
+              style={{ fontSize: '0.8125rem', padding: '5px 10px', gap: '8px' }}
             >
-              <span>{user?.avatar || '👤'}</span>
-              <span style={{ fontWeight: 600 }}>{user?.nombre || 'Usuario'}</span>
-              <span className="badge badge-syncing" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>{user?.role}</span>
+              <div style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-blue-subtle)',
+                color: 'var(--accent-blue)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.6875rem',
+                fontWeight: 700
+              }}>
+                {userInitials}
+              </div>
+              <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-main)', display: 'block' }}>
+                  {user?.nombre || 'Usuario'}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                  {user?.role || 'admin'}
+                </span>
+              </div>
+              <ChevronDown size={12} color="var(--text-muted)" />
             </button>
 
             {showRoleMenu && (
-              <div className="glass-panel" style={{
+              <div className="corporate-panel" style={{
                 position: 'absolute',
                 right: 0,
-                top: '110%',
-                zIndex: 100,
+                top: '115%',
+                zIndex: 50,
                 width: '240px',
                 padding: '8px',
-                boxShadow: 'var(--shadow-main)'
+                boxShadow: 'var(--shadow-lg)'
               }}>
                 <div style={{ padding: '6px 10px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cambiar Rol (Modo Demo):</p>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Perfil y Roles</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cambiar cuenta activa</p>
                 </div>
-                {DEFAULT_USERS.map((u) => (
-                  <button
-                    key={u.id}
-                    className="btn btn-secondary"
-                    style={{
-                      width: '100%',
-                      justifyContent: 'flex-start',
-                      marginBottom: '4px',
-                      padding: '8px 10px',
-                      fontSize: '0.85rem',
-                      backgroundColor: user?.role === u.role ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
-                      border: user?.role === u.role ? '1px solid var(--accent-cyan)' : 'none'
-                    }}
-                    onClick={() => {
-                      switchUserRole(u.role);
-                      setShowRoleMenu(false);
-                    }}
-                  >
-                    <span>{u.avatar}</span>
-                    <div style={{ textAlign: 'left', flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{u.nombre}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Rol: {u.role}</div>
-                    </div>
-                    {user?.role === u.role && <CheckCircle2 size={14} color="var(--accent-cyan)" />}
-                  </button>
-                ))}
+                {DEFAULT_USERS.map((u) => {
+                  const initials = u.nombre.split(' ').map(n => n[0]).slice(0, 2).join('');
+                  const isSelected = user?.role === u.role;
+                  return (
+                    <button
+                      key={u.id}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        justifyContent: 'flex-start',
+                        marginBottom: '4px',
+                        padding: '8px 10px',
+                        backgroundColor: isSelected ? 'var(--bg-subtle)' : 'transparent',
+                        border: isSelected ? '1px solid var(--border-color)' : '1px solid transparent',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                      onClick={() => {
+                        switchUserRole(u.role);
+                        setShowRoleMenu(false);
+                      }}
+                    >
+                      <div style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--border-color)',
+                        color: isSelected ? '#ffffff' : 'var(--text-body)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 600
+                      }}>
+                        {initials}
+                      </div>
+                      <div style={{ textAlign: 'left', flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-main)' }}>{u.nombre}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>Rol: {u.role}</div>
+                      </div>
+                      {isSelected && <CheckCircle2 size={14} color="var(--accent-emerald)" />}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
