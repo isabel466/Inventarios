@@ -3,20 +3,15 @@ import { useNetwork } from '../context/NetworkContext.jsx';
 import { useAuth, DEFAULT_USERS } from '../context/AuthContext.jsx';
 import {
   Store,
-  Wifi,
-  WifiOff,
   RefreshCw,
   Bell,
   CheckCircle2,
-  ChevronDown,
-  SlidersHorizontal
+  ChevronDown
 } from 'lucide-react';
 
 export default function Header() {
   const {
     isOnline,
-    simulationMode,
-    setSimulationMode,
     pendingSalesCount,
     isSyncing,
     triggerManualSync,
@@ -26,7 +21,6 @@ export default function Header() {
 
   const { user, switchUserRole } = useAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
-  const [showNetworkSettings, setShowNetworkSettings] = useState(false);
 
   // Initial letter for corporate avatar
   const userInitials = user?.nombre
@@ -61,102 +55,31 @@ export default function Header() {
             <Store size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
-                Inventario & POS
-              </h1>
-              <span className="badge badge-neutral" style={{ fontSize: '0.7rem', fontWeight: 600 }}>
-                Enterprise Offline-First
-              </span>
-            </div>
+            <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+              Inventario & POS
+            </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Almacenamiento Local IndexedDB • Sincronización en Red
+              Punto de Venta y Gestión de Inventario
             </p>
           </div>
         </div>
 
-        {/* ACTIONS & NETWORK STATUS */}
+        {/* ACTIONS & PROFILE */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          
-          {/* SIMULADOR DE RED DISCRETO */}
-          <div style={{ position: 'relative' }}>
+
+          {/* BOTÓN DE SINCRONIZACIÓN DISCRETO */}
+          {pendingSalesCount > 0 && (
             <button
-              className="btn btn-secondary"
-              style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--text-muted)' }}
-              onClick={() => setShowNetworkSettings(!showNetworkSettings)}
-              title="Ajustes de simulación de red"
+              className="btn btn-primary"
+              onClick={triggerManualSync}
+              disabled={isSyncing || !isOnline}
+              style={{ fontSize: '0.8125rem', padding: '6px 12px' }}
+              title="Sincronizar transacciones pendientes"
             >
-              <SlidersHorizontal size={14} />
-              <span>Red: {simulationMode === 'auto' ? 'Automática' : simulationMode === 'force_online' ? 'Online (Forzado)' : 'Offline (Simulado)'}</span>
-              <ChevronDown size={12} />
+              <RefreshCw size={13} className={isSyncing ? 'spin-anim' : ''} />
+              <span>Sincronizar ({pendingSalesCount})</span>
             </button>
-
-            {showNetworkSettings && (
-              <div className="corporate-panel" style={{
-                position: 'absolute',
-                right: 0,
-                top: '115%',
-                zIndex: 50,
-                width: '230px',
-                padding: '8px',
-                boxShadow: 'var(--shadow-lg)'
-              }}>
-                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Simulador de Conectividad</p>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Para evaluar comportamiento offline</p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <button
-                    className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
-                    onClick={() => { setSimulationMode('auto'); setShowNetworkSettings(false); }}
-                  >
-                    ● Automático (Estado real del navegador)
-                  </button>
-                  <button
-                    className={`btn ${simulationMode === 'force_online' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
-                    onClick={() => { setSimulationMode('force_online'); setShowNetworkSettings(false); }}
-                  >
-                    <Wifi size={13} color="var(--accent-emerald)" /> Forzar Online
-                  </button>
-                  <button
-                    className={`btn ${simulationMode === 'force_offline' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ fontSize: '0.75rem', justifyContent: 'flex-start', padding: '6px 8px' }}
-                    onClick={() => { setSimulationMode('force_offline'); setShowNetworkSettings(false); }}
-                  >
-                    <WifiOff size={13} color="var(--accent-rose)" /> Forzar Offline (Sin internet)
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* BADGE NETWORK STATUS */}
-          <div className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
-            <span className={`pulse-dot ${isOnline ? 'online' : 'offline'}`} />
-            {isOnline ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Wifi size={13} /> Conectado
-              </span>
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <WifiOff size={13} /> Sin Conexión
-              </span>
-            )}
-          </div>
-
-          {/* COLA LOCAL & BOTÓN DE SINCRONIZACIÓN */}
-          <button
-            className={`btn ${pendingSalesCount > 0 ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={triggerManualSync}
-            disabled={isSyncing || !isOnline}
-            style={{ fontSize: '0.8125rem', padding: '6px 12px' }}
-            title={pendingSalesCount > 0 ? "Enviar transacciones pendientes al servidor central" : "No hay transacciones pendientes"}
-          >
-            <RefreshCw size={13} className={isSyncing ? 'spin-anim' : ''} />
-            <span>Sincronizar {pendingSalesCount > 0 && `(${pendingSalesCount})`}</span>
-          </button>
+          )}
 
           {/* NOTIFICACIONES WEB */}
           {notificationPermission !== 'granted' && (
@@ -164,7 +87,7 @@ export default function Header() {
               className="btn btn-outline"
               style={{ fontSize: '0.8rem', padding: '6px 10px' }}
               onClick={requestNotificationPermission}
-              title="Habilitar alertas nativas de stock bajo"
+              title="Habilitar alertas de stock bajo"
             >
               <Bell size={13} />
               <span>Alertas</span>
@@ -179,8 +102,8 @@ export default function Header() {
               style={{ fontSize: '0.8125rem', padding: '5px 10px', gap: '8px' }}
             >
               <div style={{
-                width: '22px',
-                height: '22px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '50%',
                 backgroundColor: 'var(--accent-blue-subtle)',
                 color: 'var(--accent-blue)',

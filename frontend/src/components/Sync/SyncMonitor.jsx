@@ -5,23 +5,17 @@ import { useNetwork } from '../../context/NetworkContext.jsx';
 import {
   CloudSync,
   RefreshCw,
-  Wifi,
-  WifiOff,
   CheckCircle2,
   Server,
   Eye,
-  SlidersHorizontal,
   Clock,
   Database,
-  ArrowRight,
   X
 } from 'lucide-react';
 
 export default function SyncMonitor() {
   const {
     isOnline,
-    simulationMode,
-    setSimulationMode,
     pendingSalesCount,
     isSyncing,
     triggerManualSync,
@@ -66,11 +60,11 @@ export default function SyncMonitor() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CloudSync color="var(--accent-primary)" size={20} />
             <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Motor de Sincronización Cloud y Cola Offline
+              Sincronización Cloud y Cola Local
             </h2>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Control transaccional entre IndexedDB (Client-side) y el Servidor API REST (Backend).
+            Administración de transacciones entre la base local y el servidor central.
           </p>
         </div>
 
@@ -85,38 +79,27 @@ export default function SyncMonitor() {
         </button>
       </div>
 
-      {/* STATUS TARJETAS RED & SERVIDOR */}
+      {/* STATUS TARJETAS SERVIDOR Y RESUMEN */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
         
-        {/* NETWORK STATUS */}
+        {/* RESUMEN DE COLA */}
         <div className="corporate-card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isOnline ? <Wifi color="var(--accent-emerald)" size={16} /> : <WifiOff color="var(--accent-rose)" size={16} />}
-              Estado de Red y Conectividad
+              <Database color="var(--accent-primary)" size={16} />
+              Almacenamiento y Cola Local
             </h3>
-            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
-              {isOnline ? 'En Línea' : 'Sin Conexión'}
+            <span className="badge badge-neutral">
+              {pendingSales.length} {pendingSales.length === 1 ? 'registro' : 'registros'}
             </span>
           </div>
 
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            {isOnline
-              ? 'Las transacciones registradas se envían automáticamente al servidor central.'
-              : 'Modo seguro offline: las ventas se almacenan localmente en IndexedDB.'}
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+            Transacciones pendientes de confirmación: <strong style={{ color: 'var(--text-main)' }}>{pendingSales.length}</strong>
           </p>
-
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button className={`btn ${simulationMode === 'auto' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('auto')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
-              Automático
-            </button>
-            <button className={`btn ${simulationMode === 'force_online' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_online')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
-              Forzar Online
-            </button>
-            <button className={`btn ${simulationMode === 'force_offline' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSimulationMode('force_offline')} style={{ fontSize: '0.75rem', padding: '5px 10px' }}>
-              Forzar Offline
-            </button>
-          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Transacciones sincronizadas exitosamente: <strong style={{ color: 'var(--accent-emerald)' }}>{syncedSales.length}</strong>
+          </p>
         </div>
 
         {/* SERVER HEALTH */}
@@ -124,25 +107,25 @@ export default function SyncMonitor() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Server color="var(--accent-primary)" size={16} />
-              Servidor API Backend (Express)
+              Servidor Central API
             </h3>
-            <span className={`badge ${serverStats ? 'badge-online' : 'badge-offline'}`}>
-              {serverStats ? 'Activo (Puerto 3001)' : 'Desconectado'}
+            <span className={`badge ${serverStats ? 'badge-online' : 'badge-neutral'}`}>
+              {serverStats ? 'Servidor Disponible' : 'En Espera'}
             </span>
           </div>
 
           {serverStats ? (
             <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               <p style={{ marginBottom: '6px' }}>
-                Ventas consolidadas en backend: <strong style={{ color: 'var(--text-main)' }}>{serverStats.totalVentasServidor}</strong>
+                Ventas consolidadas en base central: <strong style={{ color: 'var(--text-main)' }}>{serverStats.totalVentasServidor}</strong>
               </p>
               <p>
-                Catálogo central: <strong style={{ color: 'var(--text-main)' }}>{serverStats.productosTotal}</strong> artículos sincronizados
+                Catálogo central: <strong style={{ color: 'var(--text-main)' }}>{serverStats.productosTotal}</strong> artículos
               </p>
             </div>
           ) : (
             <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              El servidor en <code>http://localhost:3001</code> no responde. Las transacciones se preservarán intactas en IndexedDB.
+              Servidor API en <code>http://localhost:3001</code>. Las ventas se procesan y almacenan de forma local.
             </div>
           )}
         </div>
@@ -153,10 +136,10 @@ export default function SyncMonitor() {
       <div className="corporate-panel" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Clock size={16} color="var(--accent-amber)" />
-            Cola de Transacciones Pendientes en IndexedDB ({pendingSales.length})
+            <Clock size={16} color="var(--text-muted)" />
+            Cola de Transacciones Locales ({pendingSales.length})
           </h3>
-          <span className="badge badge-warning">syncStatus = 0</span>
+          <span className="badge badge-neutral">Pendientes de envío</span>
         </div>
 
         {pendingSales.length === 0 ? (
@@ -171,14 +154,14 @@ export default function SyncMonitor() {
           }}>
             <CheckCircle2 size={24} color="var(--accent-emerald)" style={{ marginBottom: '8px', display: 'inline-block' }} />
             <p style={{ fontWeight: 500, color: 'var(--text-main)' }}>No hay ventas pendientes por sincronizar</p>
-            <p style={{ fontSize: '0.75rem' }}>Todas las transacciones locales coinciden con el servidor central.</p>
+            <p style={{ fontSize: '0.75rem' }}>Todas las transacciones se encuentran al día con el servidor central.</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Folio UUID Cliente</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Folio UUID</th>
                   <th style={{ padding: '10px 14px', fontWeight: 600 }}>Fecha Local</th>
                   <th style={{ padding: '10px 14px', fontWeight: 600 }}>Cliente</th>
                   <th style={{ padding: '10px 14px', fontWeight: 600 }}>Monto</th>
@@ -194,7 +177,7 @@ export default function SyncMonitor() {
                     <td style={{ padding: '10px 14px', fontWeight: 500 }}>{v.clienteNombre}</td>
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text-main)' }}>${v.total.toFixed(2)}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      <span className="badge badge-warning">En Cola (Local)</span>
+                      <span className="badge badge-warning">En Cola</span>
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                       <button className="btn btn-secondary" style={{ padding: '3px 8px', fontSize: '0.75rem' }} onClick={() => viewSalePayload(v)}>
@@ -242,7 +225,7 @@ export default function SyncMonitor() {
                     <td style={{ padding: '10px 14px' }}>{v.clienteNombre}</td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-main)' }}>${v.total.toFixed(2)}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      <span className="badge badge-online">syncStatus = 1 (OK)</span>
+                      <span className="badge badge-online">Confirmado</span>
                     </td>
                   </tr>
                 ))
