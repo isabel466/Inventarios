@@ -1,11 +1,9 @@
 import React from 'react';
 import { ShoppingCart, Package, BarChart3, CloudSync, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useProjectMode } from '../context/ProjectModeContext.jsx';
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const { user } = useAuth();
-  const { isAvanceMode } = useProjectMode();
 
   const tabs = [
     {

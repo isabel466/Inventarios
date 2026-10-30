@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNetwork } from '../context/NetworkContext.jsx';
 import { useAuth, DEFAULT_USERS } from '../context/AuthContext.jsx';
-import { useProjectMode } from '../context/ProjectModeContext.jsx';
 import {
   Store,
   Wifi,
@@ -10,9 +9,7 @@ import {
   Bell,
   CheckCircle2,
   ChevronDown,
-  Layers,
-  SlidersHorizontal,
-  UserCheck
+  SlidersHorizontal
 } from 'lucide-react';
 
 export default function Header() {
@@ -28,7 +25,6 @@ export default function Header() {
   } = useNetwork();
 
   const { user, switchUserRole } = useAuth();
-  const { isAvanceMode } = useProjectMode();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNetworkSettings, setShowNetworkSettings] = useState(false);
 
@@ -82,7 +78,7 @@ export default function Header() {
         {/* ACTIONS & NETWORK STATUS */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           
-          {/* SIMULADOR DE RED DISCRETO (HERRAMIENTA DE PRUEBA) */}
+          {/* SIMULADOR DE RED DISCRETO */}
           <div style={{ position: 'relative' }}>
             <button
               className="btn btn-secondary"

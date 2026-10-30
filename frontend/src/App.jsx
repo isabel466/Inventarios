@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { NetworkProvider } from './context/NetworkContext.jsx';
-import { ProjectModeProvider } from './context/ProjectModeContext.jsx';
 import { seedInitialDataIfNeeded } from './db/db.js';
 
 import Header from './components/Header.jsx';
@@ -57,12 +56,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ProjectModeProvider>
-      <AuthProvider>
-        <NetworkProvider>
-          <MainApp />
-        </NetworkProvider>
-      </AuthProvider>
-    </ProjectModeProvider>
+    <AuthProvider>
+      <NetworkProvider>
+        <MainApp />
+      </NetworkProvider>
+    </AuthProvider>
   );
 }
