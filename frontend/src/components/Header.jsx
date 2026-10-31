@@ -6,7 +6,8 @@ import {
   RefreshCw,
   Bell,
   CheckCircle2,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 
 export default function Header() {
@@ -19,7 +20,7 @@ export default function Header() {
     requestNotificationPermission
   } = useNetwork();
 
-  const { user, switchUserRole } = useAuth();
+  const { user, switchUserRole, logout } = useAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   // Initial letter for corporate avatar
@@ -183,6 +184,28 @@ export default function Header() {
                     </button>
                   );
                 })}
+
+                <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '6px', paddingTop: '6px' }}>
+                  <button
+                    className="btn"
+                    style={{
+                      width: '100%',
+                      justifyContent: 'flex-start',
+                      padding: '8px 10px',
+                      color: 'var(--accent-rose)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8125rem',
+                      gap: '8px'
+                    }}
+                    onClick={() => {
+                      setShowRoleMenu(false);
+                      logout();
+                    }}
+                  >
+                    <LogOut size={15} />
+                    <span style={{ fontWeight: 600 }}>Cerrar Sesión</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

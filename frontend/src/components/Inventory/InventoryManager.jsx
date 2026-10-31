@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
 import { triggerLowStockNotification } from '../../services/syncService.js';
+import { exportarInventarioCSV } from '../../services/exportService.js';
 import {
   Package,
   Plus,
@@ -12,7 +13,8 @@ import {
   CheckCircle2,
   Boxes,
   Layers,
-  X
+  X,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export default function InventoryManager() {
@@ -158,10 +160,22 @@ export default function InventoryManager() {
             />
           </div>
 
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ height: '38px' }}>
-            <Plus size={16} />
-            <span>Registrar Producto</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => exportarInventarioCSV(filtered)}
+              style={{ height: '38px', gap: '6px' }}
+              title="Descargar tabla en formato CSV compatible con Microsoft Excel"
+            >
+              <FileSpreadsheet size={16} color="var(--accent-emerald)" />
+              <span>Exportar Excel / CSV</span>
+            </button>
+
+            <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ height: '38px' }}>
+              <Plus size={16} />
+              <span>Registrar Producto</span>
+            </button>
+          </div>
         </div>
 
         <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>

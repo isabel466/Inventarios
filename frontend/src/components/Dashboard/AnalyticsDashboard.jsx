@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
+import { exportarVentasCSV } from '../../services/exportService.js';
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,7 +14,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { DollarSign, ShoppingBag, AlertTriangle, Cloud, CloudOff, TrendingUp } from 'lucide-react';
+import { DollarSign, ShoppingBag, AlertTriangle, Cloud, CloudOff, TrendingUp, FileSpreadsheet } from 'lucide-react';
 
 export default function AnalyticsDashboard() {
   const ventas = useLiveQuery(() => db.ventas.toArray(), []) ?? [];
@@ -51,16 +52,28 @@ export default function AnalyticsDashboard() {
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* HEADER DASHBOARD */}
-      <div className="corporate-panel" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingUp color="var(--accent-primary)" size={20} />
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Panel de Reportes y Analíticas de Venta
-          </h2>
+      <div className="corporate-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp color="var(--accent-primary)" size={20} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Panel de Reportes y Analíticas de Venta
+            </h2>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Consolidación de métricas comerciales y exportación de reportes corporativos.
+          </p>
         </div>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-          Consolidación de métricas comerciales calculadas a partir de la base local IndexedDB.
-        </p>
+
+        <button
+          className="btn btn-secondary"
+          onClick={() => exportarVentasCSV(ventas)}
+          style={{ height: '38px', gap: '8px' }}
+          title="Exportar todas las ventas registradas a archivo CSV / Excel"
+        >
+          <FileSpreadsheet size={16} color="var(--accent-emerald)" />
+          <span>Exportar Ventas Excel / CSV</span>
+        </button>
       </div>
 
       {/* KPI METRICS GRID */}

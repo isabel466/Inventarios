@@ -1,189 +1,268 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { run, get, all, initDatabase } from './db.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'pos_super_secure_jwt_secret_2026';
 
 app.use(cors());
 app.use(express.json());
 
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'database.json');
+// Initialize Relational Database on startup
+initDatabase().catch(err => {
+  console.error('❌ Error inicializando base de datos:', err);
+});
 
-const INITIAL_DATABASE = {
-  users: [
-    { id: '1', email: 'admin@pos.com', password: 'admin', nombre: 'Carlos Admin', role: 'admin' },
-    { id: '2', email: 'vendedor@pos.com', password: '123', nombre: 'Laura Vendedora', role: 'vendedor' },
-    { id: '3', email: 'almacen@pos.com', password: '123', nombre: 'Roberto Almacén', role: 'almacen' }
-  ],
-  productos: [
-    { id: 'prod-1', codigoBarras: '75010001', nombre: 'Café Espresso Gourmet 250g', stock: 45, stockMinimo: 10, precio: 12.50, categoria: 'Bebidas' },
-    { id: 'prod-2', codigoBarras: '75010002', nombre: 'Agua Mineral 600ml', stock: 120, stockMinimo: 25, precio: 2.00, categoria: 'Bebidas' },
-    { id: 'prod-3', codigoBarras: '75010003', nombre: 'Sandwich de Pavo y Queso', stock: 8, stockMinimo: 10, precio: 6.80, categoria: 'Alimentos' },
-    { id: 'prod-4', codigoBarras: '75010004', nombre: 'Galletas Artesanales Avena', stock: 30, stockMinimo: 12, precio: 3.50, categoria: 'Snacks' },
-    { id: 'prod-5', codigoBarras: '75010005', nombre: 'Jugo Natural de Naranja 500ml', stock: 15, stockMinimo: 5, precio: 4.20, categoria: 'Bebidas' }
-  ],
-  ventas: [],
-  ventasDetalle: [],
-  syncLogs: []
-};
+// Middleware for JWT Authentication
+export function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-// Load or initialize Database from disk
-function loadDatabase() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(data);
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DATABASE, null, 2), 'utf-8');
-    return JSON.parse(JSON.stringify(INITIAL_DATABASE));
-  } catch (error) {
-    console.error('Error cargando base de datos persistente, usando inicial:', error);
-    return JSON.parse(JSON.stringify(INITIAL_DATABASE));
+  if (!token) {
+    return res.status(401).json({ error: 'Token de acceso no proporcionado' });
   }
-}
 
-function saveDatabase() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Token inválido o expirado' });
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(serverDatabase, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Error guardando en disco:', error);
-  }
+    req.user = user;
+    next();
+  });
 }
-
-const serverDatabase = loadDatabase();
 
 // --- AUTH ENDPOINTS ---
-app.post('/api/v1/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  const user = serverDatabase.users.find(u => u.email === email && u.password === password);
 
-  if (!user) {
-    return res.status(401).json({ error: 'Credenciales inválidas' });
-  }
+// 1. Login formal con contraseñas encriptadas (bcrypt) y JWT
+app.post('/api/v1/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña requeridos' });
+    }
 
-  // Generate simple base64 token payload for offline client storage
-  const tokenPayload = {
-    id: user.id,
-    nombre: user.nombre,
-    role: user.role,
-    email: user.email,
-    exp: Date.now() + 86400000 // 24 hours
-  };
-  const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+    const user = await get(`SELECT * FROM usuarios WHERE email = ?`, [email]);
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
-  res.json({
-    token,
-    user: {
+    const passwordMatch = bcrypt.compareSync(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Firmar JWT con 24 horas de vigencia
+    const tokenPayload = {
       id: user.id,
       nombre: user.nombre,
       role: user.role,
       email: user.email
-    }
-  });
-});
+    };
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
 
-// --- PRODUCTS API ---
-app.get('/api/v1/productos', (req, res) => {
-  res.json(serverDatabase.productos);
-});
-
-app.post('/api/v1/productos', (req, res) => {
-  const nuevoProd = req.body;
-  const index = serverDatabase.productos.findIndex(p => p.id === nuevoProd.id || p.codigoBarras === nuevoProd.codigoBarras);
-  if (index >= 0) {
-    serverDatabase.productos[index] = { ...serverDatabase.productos[index], ...nuevoProd };
-  } else {
-    serverDatabase.productos.push(nuevoProd);
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        role: user.role,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Error en /api/v1/auth/login:', error);
+    res.status(500).json({ error: 'Error interno del servidor en autenticación' });
   }
-  saveDatabase();
-  res.status(201).json({ message: 'Producto guardado', producto: nuevoProd });
+});
+
+// 2. Validar token y obtener perfil del usuario
+app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await get(`SELECT id, email, nombre, role, creado_en FROM usuarios WHERE id = ?`, [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al verificar sesión' });
+  }
+});
+
+// --- PRODUCTOS (SQL RELACIONAL) ---
+
+app.get('/api/v1/productos', async (req, res) => {
+  try {
+    const productos = await all(`SELECT * FROM productos ORDER BY nombre ASC`);
+    res.json(productos);
+  } catch (error) {
+    console.error('Error al consultar productos:', error);
+    res.status(500).json({ error: 'Error al obtener productos de la base de datos relacional' });
+  }
+});
+
+app.post('/api/v1/productos', async (req, res) => {
+  try {
+    const { id, codigoBarras, nombre, stock, stockMinimo, precio, categoria } = req.body;
+    const existing = await get(`SELECT id FROM productos WHERE id = ? OR codigoBarras = ?`, [id, codigoBarras]);
+
+    if (existing) {
+      await run(`
+        UPDATE productos
+        SET nombre = ?, stock = ?, stockMinimo = ?, precio = ?, categoria = ?, actualizado_en = CURRENT_TIMESTAMP
+        WHERE id = ? OR codigoBarras = ?
+      `, [nombre, stock, stockMinimo, precio, categoria, id, codigoBarras]);
+    } else {
+      await run(`
+        INSERT INTO productos (id, codigoBarras, nombre, stock, stockMinimo, precio, categoria)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [id || `prod-${Date.now()}`, codigoBarras, nombre, stock || 0, stockMinimo || 5, precio || 0, categoria || 'General']);
+    }
+
+    const updated = await get(`SELECT * FROM productos WHERE codigoBarras = ?`, [codigoBarras]);
+    res.status(201).json({ message: 'Producto guardado con éxito', producto: updated });
+  } catch (error) {
+    console.error('Error guardando producto:', error);
+    res.status(500).json({ error: 'Error guardando producto en base de datos relacional' });
+  }
 });
 
 // --- BATCH SYNC ENDPOINT (OFFLINE-FIRST ENGINE) ---
-app.post('/api/v1/sincronizar-ventas', (req, res) => {
-  const { ventas } = req.body;
+app.post('/api/v1/sincronizar-ventas', async (req, res) => {
+  try {
+    const { ventas } = req.body;
 
-  if (!Array.isArray(ventas) || ventas.length === 0) {
-    return res.status(400).json({ error: 'No se enviaron ventas para sincronizar' });
-  }
+    if (!Array.isArray(ventas) || ventas.length === 0) {
+      return res.status(400).json({ error: 'No se enviaron ventas para sincronizar' });
+    }
 
-  console.log(`[BACKEND SERVER] 📡 Recibido lote de ${ventas.length} ventas para sincronizar.`);
+    console.log(`[BACKEND RELACIONAL] 📡 Recibido lote de ${ventas.length} ventas para sincronizar.`);
+    const idsProcesados = [];
 
-  const idsProcesados = [];
+    for (const ventaPayload of ventas) {
+      const { id, fecha, total, detalles, usuarioId, clienteNombre } = ventaPayload;
 
-  for (const ventaPayload of ventas) {
-    const { id, fecha, total, detalles, usuarioId, clienteNombre } = ventaPayload;
+      // Verificar si ya existe para evitar duplicados
+      const existente = await get(`SELECT id FROM ventas WHERE id = ?`, [id]);
+      if (!existente) {
+        await run(`
+          INSERT INTO ventas (id, fecha, total, usuarioId, clienteNombre, sincronizadoEn)
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `, [id, fecha || new Date().toISOString(), total, usuarioId || 'offline-user', clienteNombre || 'Cliente General']);
 
-    // Verificar si ya fue procesada anteriormente para prevenir duplicación
-    const yaExiste = serverDatabase.ventas.some(v => v.id === id);
-    if (!yaExiste) {
-      serverDatabase.ventas.push({
-        id,
-        fecha,
-        total,
-        usuarioId: usuarioId || 'offline-user',
-        clienteNombre: clienteNombre || 'Cliente General',
-        sincronizadoEn: new Date().toISOString()
-      });
+        // Insertar detalles y actualizar stock en BD relacional
+        if (Array.isArray(detalles)) {
+          for (const det of detalles) {
+            const detalleId = det.id || `${id}-${det.productoId}`;
+            await run(`
+              INSERT INTO ventas_detalle (id, ventaId, productoId, cantidad, precioUnitario, subtotal)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `, [detalleId, id, det.productoId, det.cantidad, det.precioUnitario, det.subtotal]);
 
-      // Procesar detalles y ajustar inventario del servidor
-      if (Array.isArray(detalles)) {
-        for (const det of detalles) {
-          serverDatabase.ventasDetalle.push(det);
-
-          // Ajustar stock en servidor basándonos en la venta
-          const prod = serverDatabase.productos.find(p => p.id === det.productoId);
-          if (prod) {
-            prod.stock = Math.max(0, prod.stock - det.cantidad);
+            // Decrementar stock
+            await run(`
+              UPDATE productos
+              SET stock = MAX(0, stock - ?), actualizado_en = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `, [det.cantidad, det.productoId]);
           }
         }
       }
+      idsProcesados.push(id);
     }
-    idsProcesados.push(id);
+
+    // Registrar en log de sincronización
+    await run(`
+      INSERT INTO sync_logs (ventasSincronizadas, ids_json)
+      VALUES (?, ?)
+    `, [idsProcesados.length, JSON.stringify(idsProcesados)]);
+
+    console.log(`[BACKEND RELACIONAL] ✅ Sincronización exitosa. Registros afectados: ${idsProcesados.length}`);
+
+    const productosActualizados = await all(`SELECT * FROM productos ORDER BY nombre ASC`);
+
+    res.json({
+      status: 'success',
+      message: `${idsProcesados.length} ventas sincronizadas con éxito en la base de datos relacional.`,
+      processedIds: idsProcesados,
+      productosActualizados
+    });
+  } catch (error) {
+    console.error('Error en sincronización relacional:', error);
+    res.status(500).json({ error: 'Error procesando lote de sincronización en BD relacional' });
   }
-
-  // Registrar en logs de sync
-  serverDatabase.syncLogs.push({
-    timestamp: new Date().toISOString(),
-    ventasSincronizadas: idsProcesados.length,
-    ids: idsProcesados
-  });
-
-  saveDatabase();
-
-  console.log(`[BACKEND SERVER] ✅ Sincronización exitosa. IDs confirmados:`, idsProcesados);
-
-  res.json({
-    status: 'success',
-    message: `${idsProcesados.length} ventas sincronizadas con éxito en el servidor.`,
-    processedIds: idsProcesados,
-    productosActualizados: serverDatabase.productos
-  });
 });
 
-// --- SERVER SYNC STATUS & STATS ---
-app.get('/api/v1/sync-status', (req, res) => {
-  res.json({
-    serverOnline: true,
-    totalVentasServidor: serverDatabase.ventas.length,
-    productosTotal: serverDatabase.productos.length,
-    syncLogs: serverDatabase.syncLogs.slice(-10)
-  });
+// --- SERVER STATUS & METRICS ---
+app.get('/api/v1/sync-status', async (req, res) => {
+  try {
+    const totalVentas = await get(`SELECT COUNT(*) as count FROM ventas`);
+    const totalProductos = await get(`SELECT COUNT(*) as count FROM productos`);
+    const syncLogs = await all(`SELECT * FROM sync_logs ORDER BY id DESC LIMIT 10`);
+
+    res.json({
+      serverOnline: true,
+      databaseType: 'SQLite Relational (ACID)',
+      totalVentasServidor: totalVentas.count,
+      productosTotal: totalProductos.count,
+      syncLogs
+    });
+  } catch (error) {
+    res.status(500).json({ serverOnline: true, error: error.message });
+  }
+});
+
+// --- EXPORTACIÓN DE REPORTES A CSV/EXCEL ---
+
+// Reporte de Ventas en CSV (compatible con Excel con BOM UTF-8)
+app.get('/api/v1/reportes/ventas-csv', async (req, res) => {
+  try {
+    const ventas = await all(`
+      SELECT v.id, v.fecha, v.clienteNombre, v.usuarioId, v.total, v.sincronizadoEn,
+             COUNT(d.id) as totalArticulos
+      FROM ventas v
+      LEFT JOIN ventas_detalle d ON v.id = d.ventaId
+      GROUP BY v.id
+      ORDER BY v.fecha DESC
+    `);
+
+    // Construcción del CSV con BOM para visualización correcta en Excel
+    let csv = '\uFEFF"ID Venta","Fecha","Cliente","Vendedor / Usuario","Total ($)","Articulos","Sincronizado En"\n';
+    ventas.forEach(v => {
+      csv += `"${v.id}","${v.fecha}","${(v.clienteNombre || 'General').replace(/"/g, '""')}","${v.usuarioId}","${v.total.toFixed(2)}","${v.totalArticulos || 0}","${v.sincronizadoEn}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_ventas_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exportando ventas:', error);
+    res.status(500).send('Error exportando reporte de ventas');
+  }
+});
+
+// Reporte de Inventario en CSV (compatible con Excel con BOM UTF-8)
+app.get('/api/v1/reportes/inventario-csv', async (req, res) => {
+  try {
+    const productos = await all(`SELECT * FROM productos ORDER BY categoria ASC, nombre ASC`);
+
+    let csv = '\uFEFF"ID","Código Barras","Nombre","Categoría","Stock Actual","Stock Mínimo","Precio Unitario ($)","Valor Inventario ($)"\n';
+    productos.forEach(p => {
+      const valorTotal = (p.stock * p.precio).toFixed(2);
+      csv += `"${p.id}","${p.codigoBarras}","${p.nombre.replace(/"/g, '""')}","${p.categoria}","${p.stock}","${p.stockMinimo}","${p.precio.toFixed(2)}","${valorTotal}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_inventario_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exportando inventario:', error);
+    res.status(500).send('Error exportando reporte de inventario');
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor Backend POS escuchando en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor Backend POS con Base de Datos Relacional escuchando en http://localhost:${PORT}`);
 });

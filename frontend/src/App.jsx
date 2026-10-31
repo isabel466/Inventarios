@@ -9,10 +9,11 @@ import POSTerminal from './components/POS/POSTerminal.jsx';
 import InventoryManager from './components/Inventory/InventoryManager.jsx';
 import AnalyticsDashboard from './components/Dashboard/AnalyticsDashboard.jsx';
 import SyncMonitor from './components/Sync/SyncMonitor.jsx';
+import Login from './components/Auth/Login.jsx';
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState('pos');
-  const { user } = useAuth();
+  const { user, isAuthenticated, authChecked } = useAuth();
 
   useEffect(() => {
     seedInitialDataIfNeeded().catch(err => console.error("Error sembrando datos iniciales:", err));
@@ -26,6 +27,11 @@ function MainApp() {
       setActiveTab('inventory');
     }
   }, [user, activeTab]);
+
+  // Si no está autenticado, mostrar la pantalla formal de Login
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
@@ -48,7 +54,7 @@ function MainApp() {
         backgroundColor: '#ffffff',
         marginTop: '24px'
       }}>
-        <span>POS & Inventario Empresarial • Arquitectura Offline-First con IndexedDB y Service Worker PWA</span>
+        <span>POS & Inventario Empresarial • Base de Datos Relacional y PWA Offline-First</span>
       </footer>
     </div>
   );
