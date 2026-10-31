@@ -1,5 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -7,8 +13,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// In-Memory Database for backend persistence
-const serverDatabase = {
+const DATA_DIR = path.join(__dirname, 'data');
+const DB_FILE = path.join(DATA_DIR, 'database.json');
+
+const INITIAL_DATABASE = {
   users: [
     { id: '1', email: 'admin@pos.com', password: 'admin', nombre: 'Carlos Admin', role: 'admin' },
     { id: '2', email: 'vendedor@pos.com', password: '123', nombre: 'Laura Vendedora', role: 'vendedor' },
@@ -25,6 +33,37 @@ const serverDatabase = {
   ventasDetalle: [],
   syncLogs: []
 };
+
+// Load or initialize Database from disk
+function loadDatabase() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DATABASE, null, 2), 'utf-8');
+    return JSON.parse(JSON.stringify(INITIAL_DATABASE));
+  } catch (error) {
+    console.error('Error cargando base de datos persistente, usando inicial:', error);
+    return JSON.parse(JSON.stringify(INITIAL_DATABASE));
+  }
+}
+
+function saveDatabase() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(serverDatabase, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error guardando en disco:', error);
+  }
+}
+
+const serverDatabase = loadDatabase();
 
 // --- AUTH ENDPOINTS ---
 app.post('/api/v1/auth/login', (req, res) => {
@@ -69,6 +108,7 @@ app.post('/api/v1/productos', (req, res) => {
   } else {
     serverDatabase.productos.push(nuevoProd);
   }
+  saveDatabase();
   res.status(201).json({ message: 'Producto guardado', producto: nuevoProd });
 });
 
@@ -121,6 +161,8 @@ app.post('/api/v1/sincronizar-ventas', (req, res) => {
     ventasSincronizadas: idsProcesados.length,
     ids: idsProcesados
   });
+
+  saveDatabase();
 
   console.log(`[BACKEND SERVER] ✅ Sincronización exitosa. IDs confirmados:`, idsProcesados);
 
