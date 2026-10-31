@@ -7,15 +7,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'Sistema POS & Inventario Offline-First',
-        short_name: 'POS PWA',
-        description: 'Sistema de Punto de Venta e Inventario con capacidad de sincronización sin conexión.',
+        id: 'com.pos.inventario',
+        name: 'POS & Inventario Empresarial',
+        short_name: 'POS & Inventario',
+        description: 'Sistema de Punto de Venta (POS) y Control de Inventarios con arquitectura Offline-First para Android, iOS y Web.',
         theme_color: '#0f172a',
-        background_color: '#0f172a',
+        background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'portrait-primary',
+        orientation: 'any',
+        start_url: '/',
+        scope: '/',
+        categories: ['business', 'finance', 'productivity'],
         icons: [
           {
             src: '/icon-192.png',
@@ -28,6 +32,12 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          },
+          {
+            src: '/apple-touch-icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       },

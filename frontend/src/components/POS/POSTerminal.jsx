@@ -137,7 +137,7 @@ export default function POSTerminal() {
   };
 
   return (
-    <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 390px', gap: '24px', minHeight: 'calc(100vh - 120px)' }}>
+    <div className="pos-layout">
       
       {/* SECCIÓN IZQUIERDA: CATÁLOGO Y BÚSQUEDA */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -259,10 +259,43 @@ export default function POSTerminal() {
           })}
         </div>
 
+        {/* BARRA FLOTANTE DE ACCESO RÁPIDO AL CARRITO EN MÓVIL */}
+        {cart.length > 0 && (
+          <div
+            className="mobile-cart-bar"
+            style={{
+              display: 'none',
+              position: 'sticky',
+              bottom: '12px',
+              zIndex: 30,
+              backgroundColor: 'var(--accent-primary)',
+              color: '#ffffff',
+              padding: '12px 18px',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-lg)',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer'
+            }}
+            onClick={() => document.getElementById('pos-cart-panel')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShoppingBag size={18} />
+              <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                {cart.reduce((a, b) => a + b.cantidad, 0)} artículos en orden
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>${total.toFixed(2)}</span>
+              <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>Cobrar →</span>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* SECCIÓN DERECHA: CARRITO DE COMPRAS Y COBRO */}
-      <div className="corporate-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '520px' }}>
+      <div id="pos-cart-panel" className="corporate-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '520px' }}>
         <div>
           {/* HEADER CARRITO */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)', marginBottom: '16px' }}>
