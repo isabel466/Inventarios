@@ -1,28 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { saveEncryptedSession, loadEncryptedSession, clearEncryptedSession } from '../utils/cryptoStorage.js';
 
 const AuthContext = createContext();
 
-export const DEFAULT_USERS = [
-  { id: '1', email: 'admin@pos.com', password: 'admin', nombre: 'Carlos Admin', role: 'admin' },
-  { id: '2', email: 'vendedor@pos.com', password: '123', nombre: 'Laura Vendedora', role: 'vendedor' },
-  { id: '3', email: 'almacen@pos.com', password: '123', nombre: 'Roberto Almacén', role: 'almacen' }
-];
-
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pos_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem('pos_jwt_token') || null;
+  // Inicialización con sesión descifrada desde el almacén seguro local
+  const [session, setSession] = useState(() => {
+    return loadEncryptedSession();
   });
 
   const [authChecked, setAuthChecked] = useState(false);
+
+  const user = session?.user || null;
+  const token = session?.token || null;
 
   // Validar token contra el servidor si existe sesión previa
   useEffect(() => {
@@ -37,15 +27,15 @@ export const AuthProvider = ({ children }) => {
         });
         if (res.ok) {
           const data = await res.json();
-          setUser(data.user);
-          localStorage.setItem('pos_user', JSON.stringify(data.user));
+          const updatedSession = { user: data.user, token };
+          setSession(updatedSession);
+          saveEncryptedSession(data.user, token);
         } else if (res.status === 401 || res.status === 403) {
-          // Si el token expiró, cerrar sesión
           logout();
         }
       } catch (e) {
-        // Modo offline: se conserva la sesión local
-        console.log('Validación de token en modo offline con credenciales en caché');
+        // En modo sin conexión se preserva la sesión cifrada local
+        console.log('Sesión local cargada y verificada desde almacenamiento seguro cifrado.');
       } finally {
         setAuthChecked(true);
       }
@@ -54,9 +44,9 @@ export const AuthProvider = ({ children }) => {
     verifySession();
   }, []);
 
+  // 1. Iniciar Sesión (valida contraseña con bcrypt en backend y recibe JWT con rol)
   const login = async (email, password) => {
     try {
-      // 1. Intentar autenticar contra el servidor backend (valida bcrypt y emite JWT)
       const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,46 +55,59 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('pos_user', JSON.stringify(data.user));
-        localStorage.setItem('pos_jwt_token', data.token);
+        setSession({ user: data.user, token: data.token });
+        // Almacenar la sesión de forma encriptada localmente
+        saveEncryptedSession(data.user, data.token);
         return { success: true };
       } else {
         const errData = await response.json().catch(() => ({}));
         return { success: false, error: errData.error || 'Credenciales inválidas' };
       }
     } catch (e) {
-      console.warn('Backend inalcanzable. Intentando autenticación offline de contingencia.');
-      // 2. Fallback de contingencia Offline
-      const localUser = DEFAULT_USERS.find(u => u.email === email && u.password === password);
-      if (localUser) {
-        const offlineToken = `offline-jwt-${btoa(JSON.stringify(localUser))}`;
-        setUser(localUser);
-        setToken(offlineToken);
-        localStorage.setItem('pos_user', JSON.stringify(localUser));
-        localStorage.setItem('pos_jwt_token', offlineToken);
+      console.warn('Backend fuera de línea. Intentando acceso de contingencia local.');
+      // Fallback offline si el usuario ya tenía su sesión guardada
+      const local = loadEncryptedSession();
+      if (local && local.user.email.toLowerCase() === email.toLowerCase()) {
+        setSession(local);
         return { success: true };
       }
-      return { success: false, error: 'Credenciales inválidas o servidor no disponible' };
+      return { success: false, error: 'Servidor no disponible y no hay sesión previa para esta cuenta.' };
     }
   };
 
+  // 2. Registro Público (Cualquier persona que descargue la app crea su cuenta admin)
+  const register = async (nombre, email, password) => {
+    try {
+      const response = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email, password })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSession({ user: data.user, token: data.token });
+        saveEncryptedSession(data.user, data.token);
+        return { success: true };
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        return { success: false, error: errData.error || 'No se pudo crear la cuenta' };
+      }
+    } catch (e) {
+      return { success: false, error: 'No se pudo conectar al servidor para registrar la cuenta.' };
+    }
+  };
+
+  // 3. Cerrar Sesión (limpia el almacén cifrado)
   const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('pos_user');
-    localStorage.removeItem('pos_jwt_token');
+    setSession(null);
+    clearEncryptedSession();
   };
 
-  const switchUserRole = (targetRole) => {
-    const matched = DEFAULT_USERS.find(u => u.role === targetRole);
-    if (matched) {
-      setUser(matched);
-      localStorage.setItem('pos_user', JSON.stringify(matched));
-    }
-  };
-
+  // 4. Verificación de permisos según los requerimientos estrictos:
+  // - Vendedor: Solo accede a la pantalla de Ventas y consulta de Productos.
+  // - Almacén: Solo accede a Entradas/Salidas y Productos.
+  // - Administrador: Dashboard global, Usuarios, Reportes y Ajustes.
   const hasPermission = (permission) => {
     if (!user) return false;
     if (user.role === 'admin') return true;
@@ -114,8 +117,12 @@ export const AuthProvider = ({ children }) => {
         return user.role === 'vendedor';
       case 'inventory_stock':
         return user.role === 'almacen';
-      case 'product_view':
-        return true;
+      case 'view_products':
+        return user.role === 'vendedor' || user.role === 'almacen';
+      case 'reports':
+      case 'users':
+      case 'settings':
+        return user.role === 'admin';
       default:
         return false;
     }
@@ -128,8 +135,8 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated: !!user && !!token,
       authChecked,
       login,
+      register,
       logout,
-      switchUserRole,
       hasPermission
     }}>
       {children}

@@ -34,9 +34,55 @@ export function authenticateToken(req, res, next) {
   });
 }
 
-// --- AUTH ENDPOINTS ---
+// --- AUTH & USUARIOS ENDPOINTS ---
 
-// 1. Login formal con contraseñas encriptadas (bcrypt) y JWT
+// 1. Registro público de cuentas (cualquiera que descargue la app crea su cuenta con rol 'admin' de su tienda)
+app.post('/api/v1/auth/register', async (req, res) => {
+  try {
+    const { email, password, nombre } = req.body;
+    if (!email || !password || !nombre) {
+      return res.status(400).json({ error: 'Nombre, correo y contraseña son obligatorios' });
+    }
+
+    const existing = await get(`SELECT id FROM usuarios WHERE email = ?`, [email.toLowerCase().trim()]);
+    if (existing) {
+      return res.status(409).json({ error: 'Este correo electrónico ya se encuentra registrado' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const userId = `usr-${Date.now()}`;
+    const role = 'admin'; // El usuario que se registra es el Administrador / Dueño de la tienda
+
+    await run(`
+      INSERT INTO usuarios (id, email, password_hash, nombre, role)
+      VALUES (?, ?, ?, ?, ?)
+    `, [userId, email.toLowerCase().trim(), hashedPassword, nombre.trim(), role]);
+
+    const tokenPayload = {
+      id: userId,
+      nombre: nombre.trim(),
+      role,
+      email: email.toLowerCase().trim()
+    };
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
+
+    res.status(201).json({
+      message: 'Cuenta creada con éxito',
+      token,
+      user: {
+        id: userId,
+        nombre: nombre.trim(),
+        role,
+        email: email.toLowerCase().trim()
+      }
+    });
+  } catch (error) {
+    console.error('Error en /api/v1/auth/register:', error);
+    res.status(500).json({ error: 'Error interno al registrar usuario' });
+  }
+});
+
+// 2. Login formal con contraseñas encriptadas (bcrypt) y JWT
 app.post('/api/v1/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -44,7 +90,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
 
-    const user = await get(`SELECT * FROM usuarios WHERE email = ?`, [email]);
+    const user = await get(`SELECT * FROM usuarios WHERE LOWER(email) = ?`, [email.toLowerCase().trim()]);
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
@@ -54,7 +100,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Firmar JWT con 24 horas de vigencia
+    // Firmar JWT con 24 horas de vigencia incluyendo su rol
     const tokenPayload = {
       id: user.id,
       nombre: user.nombre,
@@ -78,7 +124,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
   }
 });
 
-// 2. Validar token y obtener perfil del usuario
+// 3. Validar token y obtener perfil del usuario
 app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await get(`SELECT id, email, nombre, role, creado_en FROM usuarios WHERE id = ?`, [req.user.id]);
@@ -88,6 +134,70 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     res.json({ user });
   } catch (error) {
     res.status(500).json({ error: 'Error al verificar sesión' });
+  }
+});
+
+// 4. Gestión de Colaboradores (Exclusivo Administrador)
+app.get('/api/v1/usuarios', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permiso denegado. Se requiere rol Administrador.' });
+    }
+    const usuarios = await all(`SELECT id, email, nombre, role, creado_en FROM usuarios ORDER BY creado_en DESC`);
+    res.json(usuarios);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+app.post('/api/v1/usuarios', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permiso denegado. Se requiere rol Administrador.' });
+    }
+    const { email, password, nombre, role } = req.body;
+    if (!email || !password || !nombre || !role) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    if (!['admin', 'vendedor', 'almacen'].includes(role)) {
+      return res.status(400).json({ error: 'Rol no válido. Debe ser: admin, vendedor o almacen' });
+    }
+
+    const existing = await get(`SELECT id FROM usuarios WHERE email = ?`, [email.toLowerCase().trim()]);
+    if (existing) {
+      return res.status(409).json({ error: 'Este correo ya está registrado' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const userId = `usr-${Date.now()}`;
+
+    await run(`
+      INSERT INTO usuarios (id, email, password_hash, nombre, role)
+      VALUES (?, ?, ?, ?, ?)
+    `, [userId, email.toLowerCase().trim(), hashedPassword, nombre.trim(), role]);
+
+    res.status(201).json({
+      message: 'Colaborador creado exitosamente',
+      usuario: { id: userId, email: email.toLowerCase().trim(), nombre: nombre.trim(), role }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar colaborador' });
+  }
+});
+
+app.delete('/api/v1/usuarios/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permiso denegado.' });
+    }
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta administradora activa' });
+    }
+    await run(`DELETE FROM usuarios WHERE id = ?`, [req.params.id]);
+    res.json({ message: 'Usuario eliminado' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar usuario' });
   }
 });
 
@@ -228,7 +338,6 @@ app.get('/api/v1/reportes/ventas-csv', async (req, res) => {
       ORDER BY v.fecha DESC
     `);
 
-    // Construcción del CSV con BOM para visualización correcta en Excel
     let csv = '\uFEFF"ID Venta","Fecha","Cliente","Vendedor / Usuario","Total ($)","Articulos","Sincronizado En"\n';
     ventas.forEach(v => {
       csv += `"${v.id}","${v.fecha}","${(v.clienteNombre || 'General').replace(/"/g, '""')}","${v.usuarioId}","${v.total.toFixed(2)}","${v.totalArticulos || 0}","${v.sincronizadoEn}"\n`;

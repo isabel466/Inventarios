@@ -1,31 +1,29 @@
 import React from 'react';
-import { ShoppingCart, Package, BarChart3, CloudSync, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, CloudSync, ShieldAlert, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const { user } = useAuth();
+  const currentRole = user?.role || 'admin';
 
-  const tabs = [
+  // Configuración estricta de tabs por rol según requerimientos del sistema:
+  // - Vendedor: Solo accede a la pantalla de Ventas y consulta de Productos.
+  // - Almacén: Solo accede a Entradas/Salidas y Productos.
+  // - Administrador: Dashboard global, Usuarios, Reportes y Ajustes.
+  const allTabs = [
     {
       id: 'pos',
-      label: 'Terminal POS',
-      shortLabel: 'POS',
+      label: 'Terminal POS (Ventas)',
+      shortLabel: 'Ventas',
       icon: ShoppingCart,
       roles: ['vendedor', 'admin']
     },
     {
       id: 'inventory',
-      label: 'Inventario y Existencias',
-      shortLabel: 'Stock',
+      label: 'Inventario (Entradas/Salidas)',
+      shortLabel: 'Inventario',
       icon: Package,
       roles: ['almacen', 'admin']
-    },
-    {
-      id: 'sync',
-      label: 'Sincronización Cloud',
-      shortLabel: 'Sync',
-      icon: CloudSync,
-      roles: ['admin', 'vendedor', 'almacen']
     },
     {
       id: 'analytics',
@@ -33,12 +31,29 @@ export default function Navigation({ activeTab, setActiveTab }) {
       shortLabel: 'Reportes',
       icon: BarChart3,
       roles: ['admin']
+    },
+    {
+      id: 'users',
+      label: 'Usuarios y Personal',
+      shortLabel: 'Usuarios',
+      icon: Users,
+      roles: ['admin']
+    },
+    {
+      id: 'sync',
+      label: 'Sincronización Cloud',
+      shortLabel: 'Sync',
+      icon: CloudSync,
+      roles: ['admin']
     }
   ];
 
+  // Filtramos estrictamente los tabs permitidos para el rol actual
+  const visibleTabs = allTabs.filter(tab => tab.roles.includes(currentRole));
+
   return (
     <>
-      {/* 1. NAVEGACIÓN SUPERIOR PARA ESCRITORIO Y TABLET GRANDE */}
+      {/* 1. NAVEGACIÓN SUPERIOR PARA ESCRITORIO */}
       <nav
         className="desktop-nav"
         style={{
@@ -50,16 +65,14 @@ export default function Navigation({ activeTab, setActiveTab }) {
           overflowX: 'auto'
         }}
       >
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon;
-          const isAllowed = tab.roles.includes(user?.role || 'admin');
           const isActive = activeTab === tab.id;
 
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              disabled={!isAllowed}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -71,34 +84,29 @@ export default function Navigation({ activeTab, setActiveTab }) {
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: isActive ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                cursor: isAllowed ? 'pointer' : 'not-allowed',
-                opacity: isAllowed ? 1 : 0.45,
+                cursor: 'pointer',
                 transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap'
               }}
-              title={!isAllowed ? `Requiere rol: ${tab.roles.join(' o ')}` : tab.label}
             >
               <Icon size={17} color={isActive ? 'var(--text-main)' : 'var(--text-dim)'} />
               <span>{tab.label}</span>
-              {!isAllowed && <ShieldAlert size={14} color="var(--accent-rose)" />}
             </button>
           );
         })}
       </nav>
 
-      {/* 2. BARRA DE NAVEGACIÓN INFERIOR (BOTTOM BAR) PARA MÓVILES (PLAY STORE / APP STORE) */}
+      {/* 2. BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES */}
       <div className="mobile-bottom-nav">
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon;
-          const isAllowed = tab.roles.includes(user?.role || 'admin');
           const isActive = activeTab === tab.id;
 
           return (
             <button
               key={`mobile-${tab.id}`}
               className={`mobile-nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => isAllowed && setActiveTab(tab.id)}
-              disabled={!isAllowed}
+              onClick={() => setActiveTab(tab.id)}
             >
               <Icon size={20} />
               <span>{tab.shortLabel}</span>

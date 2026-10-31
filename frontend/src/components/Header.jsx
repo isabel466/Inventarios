@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNetwork } from '../context/NetworkContext.jsx';
-import { useAuth, DEFAULT_USERS } from '../context/AuthContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import {
   Store,
   RefreshCw,
   Bell,
-  CheckCircle2,
   ChevronDown,
-  LogOut
+  LogOut,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 
 export default function Header() {
@@ -20,13 +21,19 @@ export default function Header() {
     requestNotificationPermission
   } = useNetwork();
 
-  const { user, switchUserRole, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
-  // Initial letter for corporate avatar
+  // Iniciales corporativas para el avatar
   const userInitials = user?.nombre
     ? user.nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     : 'US';
+
+  const roleLabels = {
+    admin: 'Administrador (Total)',
+    vendedor: 'Vendedor (Cajero)',
+    almacen: 'Almacén (Stock)'
+  };
 
   return (
     <header style={{
@@ -69,7 +76,7 @@ export default function Header() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
 
           {/* BOTÓN DE SINCRONIZACIÓN DISCRETO */}
-          {pendingSalesCount > 0 && (
+          {pendingSalesCount > 0 && user?.role === 'admin' && (
             <button
               className="btn btn-primary"
               onClick={triggerManualSync}
@@ -95,19 +102,20 @@ export default function Header() {
             </button>
           )}
 
-          {/* USER ROLE SWITCHER DROPDOWN */}
+          {/* PERFIL DE USUARIO Y CIERRE DE SESIÓN */}
           <div style={{ position: 'relative' }}>
             <button
               className="btn btn-secondary"
               onClick={() => setShowRoleMenu(!showRoleMenu)}
-              style={{ fontSize: '0.8125rem', padding: '5px 10px', gap: '8px' }}
+              style={{ fontSize: '0.8125rem', padding: '5px 12px', gap: '8px' }}
             >
               <div style={{
-                width: '24px',
-                height: '24px',
+                width: '26px',
+                height: '26px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--accent-blue-subtle)',
-                color: 'var(--accent-blue)',
+                backgroundColor: user?.role === 'admin' ? 'var(--accent-primary)' :
+                                 user?.role === 'vendedor' ? '#d97706' : '#059669',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -133,79 +141,60 @@ export default function Header() {
                 right: 0,
                 top: '115%',
                 zIndex: 50,
-                width: '240px',
-                padding: '8px',
+                width: '260px',
+                padding: '12px',
                 boxShadow: 'var(--shadow-lg)'
               }}>
-                <div style={{ padding: '6px 10px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Perfil y Roles</p>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cambiar cuenta activa</p>
+                <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', marginBottom: '10px' }}>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    {user?.nombre}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {user?.email}
+                  </p>
+                  <div style={{ marginTop: '6px' }}>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                      {roleLabels[user?.role] || user?.role}
+                    </span>
+                  </div>
                 </div>
-                {DEFAULT_USERS.map((u) => {
-                  const initials = u.nombre.split(' ').map(n => n[0]).slice(0, 2).join('');
-                  const isSelected = user?.role === u.role;
-                  return (
-                    <button
-                      key={u.id}
-                      className="btn"
-                      style={{
-                        width: '100%',
-                        justifyContent: 'flex-start',
-                        marginBottom: '4px',
-                        padding: '8px 10px',
-                        backgroundColor: isSelected ? 'var(--bg-subtle)' : 'transparent',
-                        border: isSelected ? '1px solid var(--border-color)' : '1px solid transparent',
-                        borderRadius: 'var(--radius-sm)'
-                      }}
-                      onClick={() => {
-                        switchUserRole(u.role);
-                        setShowRoleMenu(false);
-                      }}
-                    >
-                      <div style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
-                        backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--border-color)',
-                        color: isSelected ? '#ffffff' : 'var(--text-body)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.75rem',
-                        fontWeight: 600
-                      }}>
-                        {initials}
-                      </div>
-                      <div style={{ textAlign: 'left', flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-main)' }}>{u.nombre}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>Rol: {u.role}</div>
-                      </div>
-                      {isSelected && <CheckCircle2 size={14} color="var(--accent-emerald)" />}
-                    </button>
-                  );
-                })}
 
-                <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '6px', paddingTop: '6px' }}>
-                  <button
-                    className="btn"
-                    style={{
-                      width: '100%',
-                      justifyContent: 'flex-start',
-                      padding: '8px 10px',
-                      color: 'var(--accent-rose)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8125rem',
-                      gap: '8px'
-                    }}
-                    onClick={() => {
-                      setShowRoleMenu(false);
-                      logout();
-                    }}
-                  >
-                    <LogOut size={15} />
-                    <span style={{ fontWeight: 600 }}>Cerrar Sesión</span>
-                  </button>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.72rem',
+                  color: '#059669',
+                  backgroundColor: '#ecfdf5',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  marginBottom: '10px'
+                }}>
+                  <ShieldCheck size={14} />
+                  <span>Sesión y token JWT cifrados localmente</span>
                 </div>
+
+                <button
+                  className="btn"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'flex-start',
+                    padding: '8px 10px',
+                    color: 'var(--accent-rose)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8125rem',
+                    gap: '8px',
+                    border: '1px solid var(--accent-rose-border)',
+                    backgroundColor: 'var(--accent-rose-subtle)'
+                  }}
+                  onClick={() => {
+                    setShowRoleMenu(false);
+                    logout();
+                  }}
+                >
+                  <LogOut size={15} />
+                  <span style={{ fontWeight: 600 }}>Cerrar Sesión</span>
+                </button>
               </div>
             )}
           </div>
