@@ -13,35 +13,35 @@ export default function Navigation({ activeTab, setActiveTab }) {
   const allTabs = [
     {
       id: 'pos',
-      label: 'Terminal POS (Ventas)',
+      label: 'Punto de Venta',
       shortLabel: 'Ventas',
       icon: ShoppingCart,
       roles: ['vendedor', 'admin']
     },
     {
       id: 'inventory',
-      label: 'Inventario (Entradas/Salidas)',
+      label: 'Inventario',
       shortLabel: 'Inventario',
       icon: Package,
       roles: ['almacen', 'admin']
     },
     {
       id: 'analytics',
-      label: 'Reportes y Analíticas',
+      label: 'Reportes y Métricas',
       shortLabel: 'Reportes',
       icon: BarChart3,
       roles: ['admin']
     },
     {
       id: 'users',
-      label: 'Usuarios y Personal',
-      shortLabel: 'Usuarios',
+      label: 'Personal y Cuentas',
+      shortLabel: 'Personal',
       icon: Users,
       roles: ['admin']
     },
     {
       id: 'sync',
-      label: 'Sincronización Cloud',
+      label: 'Sincronización',
       shortLabel: 'Sync',
       icon: CloudSync,
       roles: ['admin']

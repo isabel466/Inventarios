@@ -63,7 +63,7 @@ function MainApp() {
         backgroundColor: '#ffffff',
         marginTop: '24px'
       }}>
-        <span>POS & Inventario Empresarial • Sesión Cifrada Localmente y Control de Roles Estricto</span>
+        <span>POS & Inventario Empresarial • Todos los derechos reservados</span>
       </footer>
     </div>
   );

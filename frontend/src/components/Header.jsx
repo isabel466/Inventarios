@@ -6,9 +6,7 @@ import {
   RefreshCw,
   Bell,
   ChevronDown,
-  LogOut,
-  ShieldCheck,
-  User
+  LogOut
 } from 'lucide-react';
 
 export default function Header() {
@@ -157,21 +155,6 @@ export default function Header() {
                       {roleLabels[user?.role] || user?.role}
                     </span>
                   </div>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.72rem',
-                  color: '#059669',
-                  backgroundColor: '#ecfdf5',
-                  padding: '6px 8px',
-                  borderRadius: '4px',
-                  marginBottom: '10px'
-                }}>
-                  <ShieldCheck size={14} />
-                  <span>Sesión y token JWT cifrados localmente</span>
                 </div>
 
                 <button

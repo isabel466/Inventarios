@@ -102,11 +102,11 @@ export default function UserManager() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users color="var(--accent-primary)" size={20} />
             <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Gestión de Personal y Cuentas por Rol
+              Personal y Colaboradores
             </h2>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Crea cuentas para tus cajeros (Vendedor) y encargados de inventario (Almacén) con permisos restringidos.
+            Administra los accesos de tus cajeros y encargados de inventario.
           </p>
         </div>
 
@@ -120,35 +120,35 @@ export default function UserManager() {
         </button>
       </div>
 
-      {/* GUÍA DE ROLES RESTRINGIDOS */}
+      {/* GUÍA DE ROLES */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
         <div className="corporate-card" style={{ padding: '16px', borderLeft: '4px solid #3730a3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <Shield size={16} color="#3730a3" />
-            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Rol: Administrador</strong>
+            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Administrador</strong>
           </div>
           <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
-            Acceso completo a Dashboard global, Usuarios, Reportes financieros, POS e Inventario.
+            Acceso completo al sistema, configuración general y reportes financieros.
           </p>
         </div>
 
         <div className="corporate-card" style={{ padding: '16px', borderLeft: '4px solid #d97706' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <ShoppingCart size={16} color="#d97706" />
-            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Rol: Vendedor (Cajero)</strong>
+            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Cajero / Vendedor</strong>
           </div>
           <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
-            Restringido: Solo accede a la pantalla de Ventas (Terminal POS) y consulta de catálogo de productos.
+            Atención al cliente en mostrador, emisión de tickets y registro de ventas.
           </p>
         </div>
 
         <div className="corporate-card" style={{ padding: '16px', borderLeft: '4px solid #059669' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <Package size={16} color="#059669" />
-            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Rol: Almacén (Inventario)</strong>
+            <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>Encargado de Almacén</strong>
           </div>
           <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
-            Restringido: Solo accede a Entradas/Salidas de stock, altas de productos y control de existencias.
+            Recepción de mercancía, entradas, salidas y control de existencias.
           </p>
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function UserManager() {
       {/* TABLA DE USUARIOS */}
       <div className="corporate-panel" style={{ padding: '20px' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '14px' }}>
-          Usuarios Activos en la Base de Datos Relacional ({usuarios.length})
+          Colaboradores Registrados ({usuarios.length})
         </h3>
 
         <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
@@ -292,7 +292,7 @@ export default function UserManager() {
               </div>
 
               <div className="input-group" style={{ marginBottom: '14px' }}>
-                <label className="input-label">Contraseña Temporal</label>
+                <label className="input-label">Contraseña</label>
                 <input
                   type="password"
                   className="input-field"
@@ -304,15 +304,15 @@ export default function UserManager() {
               </div>
 
               <div className="input-group" style={{ marginBottom: '20px' }}>
-                <label className="input-label">Rol y Restricción de Vista</label>
+                <label className="input-label">Rol asignado</label>
                 <select
                   className="input-field"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                 >
-                  <option value="vendedor">Vendedor (Solo Terminal POS y consulta de productos)</option>
-                  <option value="almacen">Almacén (Solo Entradas/Salidas y control de stock)</option>
-                  <option value="admin">Administrador (Acceso Total a todo el sistema)</option>
+                  <option value="vendedor">Cajero / Vendedor</option>
+                  <option value="almacen">Encargado de Almacén</option>
+                  <option value="admin">Administrador</option>
                 </select>
               </div>
 

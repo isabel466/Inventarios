@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, Store, AlertCircle, UserPlus, LogIn, User } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, Store, AlertCircle, UserPlus, LogIn, User } from 'lucide-react';
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -34,7 +34,7 @@ export default function Login() {
     setLoading(false);
 
     if (!res.success) {
-      setError(res.error || 'Error al procesar la solicitud.');
+      setError(res.error || 'Credenciales incorrectas. Verifica tus datos.');
     }
   };
 
@@ -57,7 +57,7 @@ export default function Login() {
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '460px',
+        maxWidth: '440px',
         backgroundColor: '#ffffff',
         borderRadius: '12px',
         border: '1px solid #e2e8f0',
@@ -66,7 +66,7 @@ export default function Login() {
       }}>
         {/* ENCABEZADO CORPORATIVO */}
         <div style={{
-          padding: '28px 32px 20px 32px',
+          padding: '32px 32px 20px 32px',
           borderBottom: '1px solid #f1f5f9',
           textAlign: 'center'
         }}>
@@ -91,7 +91,7 @@ export default function Login() {
             margin: '0 0 4px 0',
             letterSpacing: '-0.02em'
           }}>
-            Sistema POS & Inventario
+            Inventario & POS
           </h2>
           <p style={{
             fontSize: '0.8125rem',
@@ -99,8 +99,8 @@ export default function Login() {
             margin: 0
           }}>
             {isRegisterMode
-              ? 'Registro de nuevo negocio / cuenta administradora'
-              : 'Acceso seguro con token JWT y sesión cifrada local'}
+              ? 'Crea tu cuenta de administrador'
+              : 'Inicia sesión para acceder a tu terminal'}
           </p>
 
           {/* SELECTOR MODO: INICIAR SESIÓN / CREAR CUENTA */}
@@ -185,7 +185,7 @@ export default function Login() {
             {isRegisterMode && (
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                  Nombre Completo / Titular
+                  Nombre Completo
                 </label>
                 <div style={{ position: 'relative' }}>
                   <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -193,7 +193,7 @@ export default function Login() {
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Juan Pérez"
+                    placeholder="Tu nombre o negocio"
                     required={isRegisterMode}
                     style={{
                       width: '100%',
@@ -219,7 +219,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu-correo@empresa.com"
+                  placeholder="correo@ejemplo.com"
                   required
                   style={{
                     width: '100%',
@@ -235,14 +235,9 @@ export default function Login() {
             </div>
 
             <div style={{ marginBottom: '22px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
-                  Contraseña
-                </label>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  Cifrada con bcrypt
-                </span>
-              </div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                Contraseña
+              </label>
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 <input
@@ -300,10 +295,10 @@ export default function Login() {
               }}
             >
               {loading ? (
-                <span>Procesando...</span>
+                <span>Ingresando...</span>
               ) : isRegisterMode ? (
                 <>
-                  <span>Registrar Cuenta Administradora</span>
+                  <span>Crear Cuenta</span>
                   <ArrowRight size={16} />
                 </>
               ) : (
@@ -315,114 +310,77 @@ export default function Login() {
             </button>
           </form>
 
-          {/* CUENTAS DE PRUEBA RÁPIDA (PARA REVISORES Y EVALUACIÓN) */}
+          {/* ACCESO RÁPIDO DISCRETO PARA PRUEBAS */}
           {!isRegisterMode && (
             <div style={{
-              marginTop: '24px',
+              marginTop: '22px',
               paddingTop: '16px',
               borderTop: '1px solid #f1f5f9'
             }}>
               <p style={{
                 fontSize: '0.72rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
+                fontWeight: 500,
                 color: '#94a3b8',
-                margin: '0 0 10px 0'
+                marginBottom: '8px',
+                textAlign: 'center'
               }}>
-                Cuentas de Acceso Rápido por Rol:
+                Acceso rápido demo:
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('admin@pos.com', 'admin')}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '7px 10px',
+                    padding: '5px 10px',
                     borderRadius: '6px',
                     backgroundColor: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     fontSize: '0.75rem',
                     color: '#334155',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 500
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>Administrador</strong> (Acceso total)
-                  </div>
-                  <span style={{ fontSize: '0.68rem', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '1px 5px', borderRadius: '4px' }}>
-                    admin
-                  </span>
+                  Admin
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('vendedor@pos.com', '123')}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '7px 10px',
+                    padding: '5px 10px',
                     borderRadius: '6px',
                     backgroundColor: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     fontSize: '0.75rem',
                     color: '#334155',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 500
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>Vendedor / Cajero</strong> (Solo ventas y productos)
-                  </div>
-                  <span style={{ fontSize: '0.68rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: '4px' }}>
-                    vendedor
-                  </span>
+                  Cajero
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('almacen@pos.com', '123')}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '7px 10px',
+                    padding: '5px 10px',
                     borderRadius: '6px',
                     backgroundColor: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     fontSize: '0.75rem',
                     color: '#334155',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 500
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>Almacén</strong> (Solo entradas/salidas y stock)
-                  </div>
-                  <span style={{ fontSize: '0.68rem', backgroundColor: '#e2e8f0', color: '#334155', padding: '1px 5px', borderRadius: '4px' }}>
-                    almacen
-                  </span>
+                  Almacén
                 </button>
               </div>
             </div>
           )}
-        </div>
-
-        {/* PIE DEL MODAL DE LOGIN */}
-        <div style={{
-          padding: '12px 24px',
-          backgroundColor: '#f8fafc',
-          borderTop: '1px solid #f1f5f9',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          fontSize: '0.75rem',
-          color: '#64748b'
-        }}>
-          <ShieldCheck size={14} color="#059669" />
-          <span>Sesión cifrada localmente con llave simétrica y tokens JWT</span>
         </div>
       </div>
     </div>
