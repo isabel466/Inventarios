@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
 import { triggerLowStockNotification } from '../../services/syncService.js';
 import { exportarInventarioCSV } from '../../services/exportService.js';
+import BarcodeLabelModal from './BarcodeLabelModal.jsx';
 import {
   Package,
   Plus,
@@ -15,7 +16,8 @@ import {
   Layers,
   X,
   FileSpreadsheet,
-  Trash2
+  Trash2,
+  Tag
 } from 'lucide-react';
 
 export default function InventoryManager() {
@@ -26,6 +28,7 @@ export default function InventoryManager() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [labelProduct, setLabelProduct] = useState(null);
 
   // Form para nuevo producto
   const [newProd, setNewProd] = useState({
@@ -245,6 +248,15 @@ export default function InventoryManager() {
                         <div style={{ display: 'inline-flex', gap: '6px' }}>
                           <button
                             className="btn btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', gap: '4px' }}
+                            title="Generar e imprimir etiqueta de código de barras"
+                            onClick={() => setLabelProduct(p)}
+                          >
+                            <Tag size={13} color="var(--accent-primary)" />
+                            <span>Etiqueta</span>
+                          </button>
+                          <button
+                            className="btn btn-secondary"
                             style={{ padding: '4px 10px', fontSize: '0.78rem' }}
                             onClick={() => {
                               setSelectedProduct(p);
@@ -414,6 +426,14 @@ export default function InventoryManager() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* MODAL GENERADOR E IMPRESOR DE ETIQUETAS DE CÓDIGOS DE BARRAS */}
+      {labelProduct && (
+        <BarcodeLabelModal
+          producto={labelProduct}
+          onClose={() => setLabelProduct(null)}
+        />
       )}
 
     </div>
