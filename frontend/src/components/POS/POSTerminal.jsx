@@ -220,6 +220,7 @@ export default function POSTerminal() {
             filteredProductos.map((p) => {
             const isLowStock = p.stock <= p.stockMinimo;
             const isOut = p.stock <= 0;
+            const cartItem = cart.find(item => item.productoId === p.id);
 
             return (
               <div
@@ -232,10 +233,13 @@ export default function POSTerminal() {
                   justifyContent: 'space-between',
                   cursor: isOut ? 'not-allowed' : 'pointer',
                   opacity: isOut ? 0.55 : 1,
+                  boxShadow: cartItem ? '0 0 0 2px var(--accent-primary)' : undefined,
                   borderLeft: isOut
                     ? '4px solid var(--accent-rose)'
                     : isLowStock
                     ? '4px solid var(--accent-amber)'
+                    : cartItem
+                    ? '4px solid var(--accent-primary)'
                     : '1px solid var(--border-color)'
                 }}
                 onClick={() => !isOut && addToCart(p)}
@@ -245,9 +249,16 @@ export default function POSTerminal() {
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                       #{p.codigoBarras}
                     </span>
-                    <span className="badge badge-neutral" style={{ fontSize: '0.6875rem' }}>
-                      {p.categoria}
-                    </span>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {cartItem && (
+                        <span className="badge" style={{ backgroundColor: 'var(--accent-primary)', color: '#ffffff', fontSize: '0.6875rem', fontWeight: 600 }}>
+                          {cartItem.cantidad} en orden
+                        </span>
+                      )}
+                      <span className="badge badge-neutral" style={{ fontSize: '0.6875rem' }}>
+                        {p.categoria}
+                      </span>
+                    </div>
                   </div>
 
                   <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', lineHeight: 1.3 }}>
@@ -283,14 +294,16 @@ export default function POSTerminal() {
             className="mobile-cart-bar"
             style={{
               display: 'none',
-              position: 'sticky',
-              bottom: '12px',
-              zIndex: 30,
+              position: 'fixed',
+              bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+              left: '16px',
+              right: '16px',
+              zIndex: 45,
               backgroundColor: 'var(--accent-primary)',
               color: '#ffffff',
               padding: '12px 18px',
               borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-lg)',
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.28)',
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer'
@@ -300,12 +313,12 @@ export default function POSTerminal() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ShoppingBag size={18} />
               <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                {cart.reduce((a, b) => a + b.cantidad, 0)} artículos en orden
+                {cart.reduce((a, b) => a + b.cantidad, 0)} {cart.reduce((a, b) => a + b.cantidad, 0) === 1 ? 'artículo' : 'artículos'} en orden
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>${totalVenta.toFixed(2)}</span>
-              <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>Cobrar →</span>
+              <span style={{ fontSize: '0.8rem', padding: '4px 10px', backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: '6px', fontWeight: 600 }}>Ver Ticket / Cobrar →</span>
             </div>
           </div>
         )}

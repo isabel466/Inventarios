@@ -13,12 +13,16 @@ db.version(1).stores({
 // Purga automática de registros ficticios antiguos del navegador del usuario
 export async function seedInitialDataIfNeeded() {
   try {
-    // 1. Eliminar los productos demo ficticios si existen en el IndexedDB local del navegador
+    // 1. Eliminar los productos demo ficticios por ID y por código de barras
     const demoIds = ['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7'];
-    await db.productos.where('id').anyOf(demoIds).delete();
+    const demoBarcodes = ['75010001', '75010002', '75010003', '75010004', '75010005', '75010006', '75010007'];
+    
+    await db.productos.bulkDelete(demoIds);
+    await db.productos.where('codigoBarras').anyOf(demoBarcodes).delete();
 
     // 2. Eliminar ventas y movimientos de prueba antiguos asociados a los demo
     await db.ventasDetalle.where('productoId').anyOf(demoIds).delete();
+    await db.clientes.bulkDelete(['cli-1', 'cli-2', 'cli-3']);
 
     // 3. Asegurar cliente genérico para cobros rápidos de mostrador
     const count = await db.clientes.count();
