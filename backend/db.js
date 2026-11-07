@@ -2,7 +2,6 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +17,7 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {
     console.error('❌ Error abriendo base de datos SQLite relacional:', err.message);
   } else {
-    console.log(`📦 Base de datos relacional SQLite conectada: ${DB_PATH}`);
+    console.log(`📦 Base de datos relacional conectada: ${DB_PATH}`);
   }
 });
 
@@ -50,7 +49,7 @@ export function all(sql, params = []) {
   });
 }
 
-// Initialize tables and seed initial data
+// Inicialización de esquemas relacionales sin registros ficticios
 export async function initDatabase() {
   // 1. Tabla Usuarios
   await run(`
@@ -114,42 +113,7 @@ export async function initDatabase() {
     )
   `);
 
-  // Sembrar usuarios iniciales con contraseña cifrada con bcrypt si no existen
-  const usersCount = await get(`SELECT COUNT(*) as count FROM usuarios`);
-  if (usersCount.count === 0) {
-    console.log('🌱 Inicializando usuarios con contraseñas encriptadas (bcrypt)...');
-    const adminHash = bcrypt.hashSync('admin', 10);
-    const pass123Hash = bcrypt.hashSync('123', 10);
-
-    await run(`INSERT INTO usuarios (id, email, password_hash, nombre, role) VALUES (?, ?, ?, ?, ?)`,
-      ['1', 'admin@pos.com', adminHash, 'Carlos Admin', 'admin']);
-    await run(`INSERT INTO usuarios (id, email, password_hash, nombre, role) VALUES (?, ?, ?, ?, ?)`,
-      ['2', 'vendedor@pos.com', pass123Hash, 'Laura Vendedora', 'vendedor']);
-    await run(`INSERT INTO usuarios (id, email, password_hash, nombre, role) VALUES (?, ?, ?, ?, ?)`,
-      ['3', 'almacen@pos.com', pass123Hash, 'Roberto Almacén', 'almacen']);
-  }
-
-  // Sembrar catálogo inicial si la tabla de productos está vacía
-  const prodCount = await get(`SELECT COUNT(*) as count FROM productos`);
-  if (prodCount.count === 0) {
-    console.log('🌱 Inicializando catálogo de productos relacional...');
-    const initialProducts = [
-      { id: 'prod-1', codigoBarras: '75010001', nombre: 'Café Espresso Gourmet 250g', stock: 45, stockMinimo: 10, precio: 12.50, categoria: 'Bebidas' },
-      { id: 'prod-2', codigoBarras: '75010002', nombre: 'Agua Mineral 600ml', stock: 120, stockMinimo: 25, precio: 2.00, categoria: 'Bebidas' },
-      { id: 'prod-3', codigoBarras: '75010003', nombre: 'Sandwich de Pavo y Queso', stock: 8, stockMinimo: 10, precio: 6.80, categoria: 'Alimentos' },
-      { id: 'prod-4', codigoBarras: '75010004', nombre: 'Galletas Artesanales Avena', stock: 30, stockMinimo: 12, precio: 3.50, categoria: 'Snacks' },
-      { id: 'prod-5', codigoBarras: '75010005', nombre: 'Jugo Natural de Naranja 500ml', stock: 15, stockMinimo: 5, precio: 4.20, categoria: 'Bebidas' }
-    ];
-
-    for (const p of initialProducts) {
-      await run(`
-        INSERT INTO productos (id, codigoBarras, nombre, stock, stockMinimo, precio, categoria)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [p.id, p.codigoBarras, p.nombre, p.stock, p.stockMinimo, p.precio, p.categoria]);
-    }
-  }
-
-  console.log('✅ Base de datos relacional inicializada y verificada.');
+  console.log('✅ Base de datos relacional lista (esquemas creados sin datos ficticios).');
 }
 
 export default { run, get, all, initDatabase };

@@ -38,13 +38,6 @@ export default function Login() {
     }
   };
 
-  const handleQuickLogin = (quickEmail, quickPassword) => {
-    setIsRegisterMode(false);
-    setEmail(quickEmail);
-    setPassword(quickPassword);
-    setError('');
-  };
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -309,78 +302,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* ACCESO RÁPIDO DISCRETO PARA PRUEBAS */}
-          {!isRegisterMode && (
-            <div style={{
-              marginTop: '22px',
-              paddingTop: '16px',
-              borderTop: '1px solid #f1f5f9'
-            }}>
-              <p style={{
-                fontSize: '0.72rem',
-                fontWeight: 500,
-                color: '#94a3b8',
-                marginBottom: '8px',
-                textAlign: 'center'
-              }}>
-                Acceso rápido demo:
-              </p>
-
-              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('admin@pos.com', 'admin')}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '0.75rem',
-                    color: '#334155',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Admin
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('vendedor@pos.com', '123')}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '0.75rem',
-                    color: '#334155',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Cajero
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('almacen@pos.com', '123')}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '0.75rem',
-                    color: '#334155',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Almacén
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
