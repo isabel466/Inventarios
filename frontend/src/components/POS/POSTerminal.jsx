@@ -199,7 +199,25 @@ export default function POSTerminal() {
 
         {/* GRID DE PRODUCTOS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '14px', alignContent: 'start' }}>
-          {filteredProductos.map((p) => {
+          {filteredProductos.length === 0 ? (
+            <div style={{
+              gridColumn: '1 / -1',
+              padding: '60px 24px',
+              textAlign: 'center',
+              backgroundColor: '#ffffff',
+              border: '1px dashed var(--border-color)',
+              borderRadius: 'var(--radius-lg)'
+            }}>
+              <Package size={40} color="var(--text-dim)" style={{ marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                Catálogo de productos vacío
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                No hay productos en inventario. Comienza dando de alta tus productos reales en la pestaña de Inventario.
+              </p>
+            </div>
+          ) : (
+            filteredProductos.map((p) => {
             const isLowStock = p.stock <= p.stockMinimo;
             const isOut = p.stock <= 0;
 
@@ -256,7 +274,7 @@ export default function POSTerminal() {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
 
         {/* BARRA FLOTANTE DE ACCESO RÁPIDO AL CARRITO EN MÓVIL */}

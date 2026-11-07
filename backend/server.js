@@ -239,6 +239,15 @@ app.post('/api/v1/productos', async (req, res) => {
   }
 });
 
+app.delete('/api/v1/productos/:id', async (req, res) => {
+  try {
+    await run(`DELETE FROM productos WHERE id = ?`, [req.params.id]);
+    res.json({ message: 'Producto eliminado con éxito' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
 // --- BATCH SYNC ENDPOINT (OFFLINE-FIRST ENGINE) ---
 app.post('/api/v1/sincronizar-ventas', async (req, res) => {
   try {

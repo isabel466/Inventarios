@@ -14,7 +14,8 @@ import {
   Boxes,
   Layers,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Trash2
 } from 'lucide-react';
 
 export default function InventoryManager() {
@@ -99,6 +100,14 @@ export default function InventoryManager() {
 
     setShowMovementModal(false);
     setSelectedProduct(null);
+  };
+
+  const handleEliminarProducto = async (producto) => {
+    if (!confirm(`¿Eliminar "${producto.nombre}" del inventario?`)) return;
+    await db.productos.delete(producto.id);
+    try {
+      await fetch(`/api/v1/productos/${producto.id}`, { method: 'DELETE' });
+    } catch {}
   };
 
   const filtered = productos.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.codigoBarras.includes(searchTerm));
@@ -233,16 +242,33 @@ export default function InventoryManager() {
                         {p.stockMinimo}
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setShowMovementModal(true);
-                          }}
-                        >
-                          Ajustar Stock
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setShowMovementModal(true);
+                            }}
+                          >
+                            Ajustar Stock
+                          </button>
+                          <button
+                            className="btn"
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '0.78rem',
+                              color: 'var(--accent-rose)',
+                              backgroundColor: 'var(--accent-rose-subtle)',
+                              border: '1px solid var(--accent-rose-border)',
+                              borderRadius: 'var(--radius-xs)'
+                            }}
+                            title="Eliminar producto"
+                            onClick={() => handleEliminarProducto(p)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
