@@ -304,7 +304,7 @@ export default function POSTerminal() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>${total.toFixed(2)}</span>
+              <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>${totalVenta.toFixed(2)}</span>
               <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>Cobrar →</span>
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function POSTerminal() {
               onChange={(e) => setSelectedCliente(e.target.value)}
             >
               {clientes.map(c => (
-                <option key={c.id} value={c.nombre}>{c.nombre} ({c.telefono})</option>
+                <option key={c.id} value={c.nombre}>{c.nombre} {c.telefono ? `(${c.telefono})` : ''}</option>
               ))}
             </select>
           </div>
