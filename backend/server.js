@@ -8,8 +8,57 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'pos_super_secure_jwt_secret_2026';
 
+// 1. Ocultar la firma del framework para evitar fingerprinting de tecnología
+app.disable('x-powered-by');
+
+// 2. Cabeceras de seguridad HTTP alineadas a estándares OWASP
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
+
+// 3. Mecanismo contra Ataques de Fuerza Bruta (Brute-Force & Credential Stuffing)
+const loginAttempts = new Map();
+
+function loginRateLimiter(req, res, next) {
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+
+  if (record && record.lockUntil && now < record.lockUntil) {
+    const minutesLeft = Math.ceil((record.lockUntil - now) / 60000);
+    return res.status(429).json({
+      error: `Demasiados intentos fallidos. Por seguridad, intente en ${minutesLeft} minuto(s).`
+    });
+  }
+  next();
+}
+
+function handleFailedLogin(ip) {
+  const now = Date.now();
+  const record = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
+  record.count += 1;
+  if (record.count >= 5) {
+    record.lockUntil = now + 5 * 60 * 1000; // Bloqueo de 5 minutos tras 5 fallos consecutivos
+    record.count = 0;
+  }
+  loginAttempts.set(ip, record);
+}
+
+function handleSuccessfulLogin(ip) {
+  loginAttempts.delete(ip);
+}
+
+// 4. Validador de formato de correo RFC 5322 simplificado
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
 
 // Initialize Relational Database on startup
 initDatabase().catch(err => {
@@ -42,6 +91,14 @@ app.post('/api/v1/auth/register', async (req, res) => {
     const { email, password, nombre } = req.body;
     if (!email || !password || !nombre) {
       return res.status(400).json({ error: 'Nombre, correo y contraseña son obligatorios' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'El formato de correo electrónico no es válido' });
+    }
+
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
     const existing = await get(`SELECT id FROM usuarios WHERE email = ?`, [email.toLowerCase().trim()]);
@@ -82,8 +139,9 @@ app.post('/api/v1/auth/register', async (req, res) => {
   }
 });
 
-// 2. Login formal con contraseñas encriptadas (bcrypt) y JWT
-app.post('/api/v1/auth/login', async (req, res) => {
+// 2. Login formal con protección brute-force, contraseñas encriptadas (bcrypt) y JWT
+app.post('/api/v1/auth/login', loginRateLimiter, async (req, res) => {
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -92,13 +150,17 @@ app.post('/api/v1/auth/login', async (req, res) => {
 
     const user = await get(`SELECT * FROM usuarios WHERE LOWER(email) = ?`, [email.toLowerCase().trim()]);
     if (!user) {
+      handleFailedLogin(ip);
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const passwordMatch = bcrypt.compareSync(password, user.password_hash);
     if (!passwordMatch) {
+      handleFailedLogin(ip);
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
+
+    handleSuccessfulLogin(ip);
 
     // Firmar JWT con 24 horas de vigencia incluyendo su rol
     const tokenPayload = {
@@ -378,6 +440,32 @@ app.get('/api/v1/reportes/inventario-csv', async (req, res) => {
   } catch (error) {
     console.error('Error exportando inventario:', error);
     res.status(500).send('Error exportando reporte de inventario');
+  }
+});
+
+// --- MANTENIMIENTO Y SEGURIDAD DE BASE DE DATOS ---
+
+// Endpoint de purga general de registros (exclusivo para usuarios con rol 'admin')
+app.delete('/api/v1/admin/limpiar-registros', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permiso denegado. Se requiere rol de Administrador.' });
+    }
+
+    await run('DELETE FROM ventas_detalle');
+    await run('DELETE FROM ventas');
+    await run('DELETE FROM productos');
+    await run('DELETE FROM sync_logs');
+
+    console.log(`[SEGURIDAD & AUDITORÍA] 🧹 Base de datos purgada por administrador: ${req.user.email} (${req.user.id})`);
+
+    res.json({
+      status: 'success',
+      message: 'Base de datos restaurada a estado limpio: productos, ventas y logs eliminados exitosamente.'
+    });
+  } catch (error) {
+    console.error('Error al limpiar registros:', error);
+    res.status(500).json({ error: 'Error interno al limpiar base de datos central' });
   }
 });
 

@@ -10,21 +10,38 @@ db.version(1).stores({
   clientes: 'id, nombre, telefono, email'
 });
 
-// Purga automática de registros ficticios antiguos del navegador del usuario
+// Purga completa de registros locales a solicitud del usuario o en mantenimiento
+export async function limpiarTodosLosRegistrosLocales() {
+  try {
+    await db.productos.clear();
+    await db.ventas.clear();
+    await db.ventasDetalle.clear();
+    await db.movimientos.clear();
+    await db.clientes.clear();
+
+    await db.clientes.add({
+      id: 'cli-default',
+      nombre: 'Público General',
+      telefono: '',
+      email: ''
+    });
+
+    console.log('🧹 Base de datos IndexedDB limpiada por completo (0 productos, 0 ventas).');
+  } catch (err) {
+    console.error('Error al limpiar base de datos local:', err);
+  }
+}
+
+// Inicialización de la base de datos en estado limpio para producción
 export async function seedInitialDataIfNeeded() {
   try {
-    // 1. Eliminar los productos demo ficticios por ID y por código de barras
-    const demoIds = ['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7'];
-    const demoBarcodes = ['75010001', '75010002', '75010003', '75010004', '75010005', '75010006', '75010007'];
-    
-    await db.productos.bulkDelete(demoIds);
-    await db.productos.where('codigoBarras').anyOf(demoBarcodes).delete();
+    // Si aún no se ha ejecutado la purga general definitiva:
+    if (!localStorage.getItem('pos_records_cleaned_v3')) {
+      await limpiarTodosLosRegistrosLocales();
+      localStorage.setItem('pos_records_cleaned_v3', 'true');
+    }
 
-    // 2. Eliminar ventas y movimientos de prueba antiguos asociados a los demo
-    await db.ventasDetalle.where('productoId').anyOf(demoIds).delete();
-    await db.clientes.bulkDelete(['cli-1', 'cli-2', 'cli-3']);
-
-    // 3. Asegurar cliente genérico para cobros rápidos de mostrador
+    // Asegurar cliente genérico para cobros rápidos de mostrador
     const count = await db.clientes.count();
     if (count === 0) {
       await db.clientes.add({
@@ -34,8 +51,8 @@ export async function seedInitialDataIfNeeded() {
         email: ''
       });
     }
-    console.log('✅ Base de datos IndexedDB purgada de registros demo ficticios.');
+    console.log('✅ Base de datos IndexedDB lista y en estado limpio.');
   } catch (err) {
-    console.error('Error al purgar datos demo de IndexedDB:', err);
+    console.error('Error al inicializar IndexedDB:', err);
   }
 }

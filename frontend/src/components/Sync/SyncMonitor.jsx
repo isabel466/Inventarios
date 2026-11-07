@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db/db.js';
+import { db, limpiarTodosLosRegistrosLocales } from '../../db/db.js';
 import { useNetwork } from '../../context/NetworkContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   CloudSync,
   RefreshCw,
@@ -10,10 +11,13 @@ import {
   Eye,
   Clock,
   Database,
+  Trash2,
+  ShieldAlert,
   X
 } from 'lucide-react';
 
 export default function SyncMonitor() {
+  const { user, token } = useAuth();
   const {
     isOnline,
     pendingSalesCount,
@@ -49,6 +53,26 @@ export default function SyncMonitor() {
   const viewSalePayload = async (venta) => {
     const detalles = await db.ventasDetalle.where('ventaId').equals(venta.id).toArray();
     setSelectedSaleDetail({ ...venta, detalles });
+  };
+
+  const handleLimpiarRegistros = async () => {
+    if (!window.confirm('¿Confirmas que deseas vaciar todos los registros de prueba (productos y ventas)? Esta acción dejará tanto la base local como el servidor central en estado 100% limpio.')) {
+      return;
+    }
+
+    try {
+      await limpiarTodosLosRegistrosLocales();
+      if (token) {
+        await fetch('/api/v1/admin/limpiar-registros', {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+      fetchServerStatus();
+      alert('✅ Base de datos local y central restauradas con éxito a un estado limpio.');
+    } catch (err) {
+      alert('Error durante la limpieza: ' + err.message);
+    }
   };
 
   return (
@@ -234,6 +258,37 @@ export default function SyncMonitor() {
           </table>
         </div>
       </div>
+
+      {/* PANEL DE MANTENIMIENTO Y SEGURIDAD (ADMIN) */}
+      {user?.role === 'admin' && (
+        <div className="corporate-panel" style={{ padding: '20px', borderLeft: '4px solid var(--accent-rose)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+            <div>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldAlert size={18} color="var(--accent-rose)" />
+                Mantenimiento y Control de Datos (Administrador)
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Permite vaciar todos los registros de prueba y transacciones acumuladas en la base local y en el servidor central.
+              </p>
+            </div>
+
+            <button
+              className="btn btn-secondary"
+              onClick={handleLimpiarRegistros}
+              style={{
+                color: 'var(--accent-rose)',
+                borderColor: 'var(--accent-rose)',
+                padding: '8px 16px',
+                fontSize: '0.8125rem'
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Vaciar Registros de Prueba</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL VER JSON PAYLOAD */}
       {selectedSaleDetail && (
