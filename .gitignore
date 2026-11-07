@@ -43,3 +43,8 @@ Thumbs.db
 # Respaldo local y proyectos antiguos anidados
 backup_version_100/
 proyectos/
+
+# Informes y documentos de entrega
+*.docx
+*INFORME*
+*REPORTE*
