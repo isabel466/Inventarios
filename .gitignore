@@ -48,3 +48,5 @@ proyectos/
 *.docx
 *INFORME*
 *REPORTE*
+
+frontend/.wrangler/

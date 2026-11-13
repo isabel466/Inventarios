@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
 
   const user = session?.user || null;
   const token = session?.token || null;
+const tiendaId = user?.tienda_id || null;
 
   // Validar token contra el servidor si existe sesión previa
   useEffect(() => {
@@ -63,16 +64,16 @@ export const AuthProvider = ({ children }) => {
         const errData = await response.json().catch(() => ({}));
         return { success: false, error: errData.error || 'Credenciales inválidas' };
       }
-    } catch (e) {
-      console.warn('Backend fuera de línea. Intentando acceso de contingencia local.');
-      // Fallback offline si el usuario ya tenía su sesión guardada
-      const local = loadEncryptedSession();
-      if (local && local.user.email.toLowerCase() === email.toLowerCase()) {
-        setSession(local);
-        return { success: true };
-      }
-      return { success: false, error: 'Servidor no disponible y no hay sesión previa para esta cuenta.' };
-    }
+    
+} catch (e) {
+  console.error('Error de conexión con el servidor:', e);
+
+  return {
+    success: false,
+    error: 'No se pudo conectar al servidor. Verifica tu conexión a internet.'
+  };
+}
+
   };
 
   // 2. Registro Público (Cualquier persona que descargue la app crea su cuenta admin)
@@ -132,6 +133,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       token,
+  tiendaId,
       isAuthenticated: !!user && !!token,
       authChecked,
       login,

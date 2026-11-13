@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { exportarVentasCSV } from '../../services/exportService.js';
 import {
   ResponsiveContainer,
@@ -16,10 +17,30 @@ import {
 } from 'recharts';
 import { DollarSign, ShoppingBag, AlertTriangle, Cloud, CloudOff, TrendingUp, FileSpreadsheet } from 'lucide-react';
 
+
 export default function AnalyticsDashboard() {
-  const ventas = useLiveQuery(() => db.ventas.toArray(), []) ?? [];
-  const productos = useLiveQuery(() => db.productos.toArray(), []) ?? [];
-  const detalles = useLiveQuery(() => db.ventasDetalle.toArray(), []) ?? [];
+  const { tiendaId } = useAuth();
+
+  const ventas = useLiveQuery(
+    () => tiendaId
+      ? db.ventas.where('tiendaId').equals(tiendaId).toArray()
+      : [],
+    [tiendaId]
+  ) ?? [];
+
+  const productos = useLiveQuery(
+    () => tiendaId
+      ? db.productos.where('tiendaId').equals(tiendaId).toArray()
+      : [],
+    [tiendaId]
+  ) ?? [];
+
+  const detalles = useLiveQuery(
+    () => tiendaId
+      ? db.ventasDetalle.where('tiendaId').equals(tiendaId).toArray()
+      : [],
+    [tiendaId]
+  ) ?? [];
 
   // KPIs
   const totalVentasMonto = ventas.reduce((acc, v) => acc + (v.total || 0), 0);

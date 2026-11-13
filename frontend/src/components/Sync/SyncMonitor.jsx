@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function SyncMonitor() {
-  const { user, token } = useAuth();
-  const {
+const { user, token, tiendaId } = useAuth();  const {
     isOnline,
     pendingSalesCount,
     isSyncing,
@@ -26,8 +25,37 @@ export default function SyncMonitor() {
     lastSyncTime
   } = useNetwork();
 
-  const pendingSales = useLiveQuery(() => db.ventas.where('syncStatus').equals(0).toArray(), []) ?? [];
-  const syncedSales = useLiveQuery(() => db.ventas.where('syncStatus').equals(1).reverse().limit(10).toArray(), []) ?? [];
+  
+const pendingSales = useLiveQuery(
+  () => {
+    if (!tiendaId) return [];
+
+    return db.ventas
+      .where('tiendaId')
+      .equals(tiendaId)
+      .filter(venta => venta.syncStatus === 0)
+      .toArray();
+  },
+  [tiendaId]
+) ?? [];
+
+const syncedSales = useLiveQuery(
+  async () => {
+    if (!tiendaId) return [];
+
+    const ventas = await db.ventas
+      .where('tiendaId')
+      .equals(tiendaId)
+      .filter(venta => venta.syncStatus === 1)
+      .toArray();
+
+    return ventas
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 10);
+  },
+  [tiendaId]
+) ?? [];
+
 
   const [serverStats, setServerStats] = useState(null);
   const [selectedSaleDetail, setSelectedSaleDetail] = useState(null);
@@ -55,25 +83,16 @@ export default function SyncMonitor() {
     setSelectedSaleDetail({ ...venta, detalles });
   };
 
-  const handleLimpiarRegistros = async () => {
-    if (!window.confirm('¿Confirmas que deseas vaciar todos los registros de prueba (productos y ventas)? Esta acción dejará tanto la base local como el servidor central en estado 100% limpio.')) {
-      return;
-    }
+  
+const handleLimpiarRegistros = async () => {
+  window.alert(
+    'La limpieza de registros está deshabilitada temporalmente ' +
+    'para proteger los productos, las ventas y los datos pendientes ' +
+    'de sincronización.'
+  );
+};
 
-    try {
-      await limpiarTodosLosRegistrosLocales();
-      if (token) {
-        await fetch('/api/v1/admin/limpiar-registros', {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      }
-      fetchServerStatus();
-      alert('✅ Base de datos local y central restauradas con éxito a un estado limpio.');
-    } catch (err) {
-      alert('Error durante la limpieza: ' + err.message);
-    }
-  };
+
 
   return (
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>

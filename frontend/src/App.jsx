@@ -13,14 +13,19 @@ import UserManager from './components/Users/UserManager.jsx';
 import Login from './components/Auth/Login.jsx';
 
 function MainApp() {
-  const { user, isAuthenticated } = useAuth();
+const { user, isAuthenticated, tiendaId } = useAuth();
   const [activeTab, setActiveTab] = useState(() => {
     return user?.role === 'almacen' ? 'inventory' : 'pos';
   });
 
-  useEffect(() => {
-    seedInitialDataIfNeeded().catch(err => console.error("Error sembrando datos iniciales:", err));
-  }, []);
+
+useEffect(() => {
+  if (!isAuthenticated || !tiendaId) return;
+
+  seedInitialDataIfNeeded(tiendaId).catch((error) => {
+    console.error('Error inicializando datos de la tienda:', error);
+  });
+}, [isAuthenticated, tiendaId]);
 
   // Restricción estricta de vistas según el rol del usuario autenticado:
   // - Vendedor: Solo accede a la pantalla de Ventas y consulta de Productos.

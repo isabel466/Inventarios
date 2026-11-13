@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db.js';
 import { triggerLowStockNotification } from '../../services/syncService.js';
@@ -21,8 +22,23 @@ import {
 } from 'lucide-react';
 
 export default function InventoryManager() {
-  const productos = useLiveQuery(() => db.productos.toArray(), []) ?? [];
-  const movimientos = useLiveQuery(() => db.movimientos.orderBy('fecha').reverse().limit(15).toArray(), []) ?? [];
+  const { tiendaId } = useAuth();
+
+  // Los registros anteriores sin tiendaId quedan intactos pero no se muestran.
+  const productos = useLiveQuery(
+    () => tiendaId
+      ? db.productos.where('tiendaId').equals(tiendaId).toArray()
+      : [],
+    [tiendaId]
+  ) ?? [];
+
+  const movimientos = useLiveQuery(
+    () => tiendaId
+      ? db.movimientos.where('tiendaId').equals(tiendaId)
+          .sortBy('fecha').then(items => items.reverse().slice(0, 15))
+      : [],
+    [tiendaId]
+  ) ?? [];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -49,68 +65,151 @@ export default function InventoryManager() {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    const id = `prod-${crypto.randomUUID().slice(0, 8)}`;
-    const productoObj = {
-      id,
-      nombre: newProd.nombre,
-      codigoBarras: newProd.codigoBarras || `${Math.floor(10000000 + Math.random() * 90000000)}`,
-      categoria: newProd.categoria,
-      precio: parseFloat(newProd.precio),
-      stock: parseInt(newProd.stock),
-      stockMinimo: parseInt(newProd.stockMinimo)
-    };
+    if (!tiendaId) {
+      window.alert('No se pudo identificar la tienda. Inicia sesión nuevamente.');
+      return;
+    }
 
-    await db.productos.add(productoObj);
+    const nombre = newProd.nombre.trim();
+    const stock = Number(newProd.stock);
+    const stockMinimo = Number(newProd.stockMinimo);
+    const precio = Number(newProd.precio);
 
-    // Movimiento inicial
-    await db.movimientos.add({
-      id: crypto.randomUUID(),
-      productoId: id,
-      tipo: 'ENTRADA',
-      cantidad: productoObj.stock,
-      fecha: new Date().toISOString(),
-      motivo: 'Inventario Inicial'
-    });
+    if (!nombre || !Number.isSafeInteger(stock) || stock < 0 ||
+        !Number.isSafeInteger(stockMinimo) || stockMinimo < 0 ||
+        !Number.isFinite(precio) || precio < 0 || newProd.precio === '') {
+      window.alert('Revisa nombre, precio y cantidades. No se permiten valores negativos.');
+      return;
+    }
 
-    setShowAddModal(false);
-    setNewProd({ nombre: '', codigoBarras: '', categoria: 'Bebidas', precio: '', stock: '', stockMinimo: '' });
+    const id = crypto.randomUUID();
+  
+const productoObj = {
+  id,
+  tiendaId,
+  syncStatus: 0,
+  nombre,
+  codigoBarras:
+    newProd.codigoBarras.trim() ||
+    `${Math.floor(10000000 + Math.random() * 90000000)}`,
+  categoria: newProd.categoria,
+  precio,
+
+  // Existencias actuales en este dispositivo.
+  stock,
+
+  // Existencias originales al crear el producto.
+  // No deben cambiar con ventas ni ajustes posteriores.
+  stockInicial: stock,
+
+  stockMinimo
+};
+
+
+    try {
+      const duplicado = await db.productos.where('tiendaId').equals(tiendaId)
+        .filter(p => p.codigoBarras === productoObj.codigoBarras).first();
+      if (duplicado) {
+        window.alert('Esta tienda ya tiene un producto con ese código de barras.');
+        return;
+      }
+
+      await db.transaction('rw', db.productos, db.movimientos, async () => {
+        await db.productos.add(productoObj);
+        await db.movimientos.add({
+          id: crypto.randomUUID(),
+          tiendaId,
+          productoId: id,
+          tipo: 'ENTRADA',
+          cantidad: stock,
+          fecha: new Date().toISOString(),
+          motivo: 'Inventario Inicial'
+        });
+      });
+
+      setShowAddModal(false);
+      setNewProd({ nombre: '', codigoBarras: '', categoria: 'Bebidas', precio: '', stock: '', stockMinimo: '' });
+    } catch (error) {
+      console.error('Error guardando producto:', error);
+      window.alert('No se pudo guardar el producto localmente.');
+    }
   };
 
   const handleStockMovement = async (e) => {
     e.preventDefault();
-    if (!selectedProduct) return;
-
-    const cantidadNum = parseInt(movForm.cantidad);
-    const nuevoStock = movForm.tipo === 'ENTRADA' 
-      ? selectedProduct.stock + cantidadNum
-      : Math.max(0, selectedProduct.stock - cantidadNum);
-
-    await db.transaction('rw', db.productos, db.movimientos, async () => {
-      await db.productos.update(selectedProduct.id, { stock: nuevoStock });
-      await db.movimientos.add({
-        id: crypto.randomUUID(),
-        productoId: selectedProduct.id,
-        tipo: movForm.tipo,
-        cantidad: cantidadNum,
-        fecha: new Date().toISOString(),
-        motivo: movForm.motivo
-      });
-    });
-
-    if (nuevoStock <= selectedProduct.stockMinimo) {
-      triggerLowStockNotification({ ...selectedProduct, stock: nuevoStock });
+    if (!tiendaId || !selectedProduct || selectedProduct.tiendaId !== tiendaId) {
+      window.alert('Producto o tienda no válidos.');
+      return;
     }
 
+    const cantidadNum = Number(movForm.cantidad);
+    if (!Number.isSafeInteger(cantidadNum) || cantidadNum <= 0 ||
+        !['ENTRADA', 'SALIDA'].includes(movForm.tipo)) {
+      window.alert('Introduce una cantidad entera mayor que cero.');
+      return;
+    }
+
+    let stockActualizado;
+    try {
+      await db.transaction(
+        'rw',
+        db.productos,
+        db.movimientos,
+        db.operacionesInventario,
+        async () => {
+        const productoActual = await db.productos.get(selectedProduct.id);
+        if (!productoActual || productoActual.tiendaId !== tiendaId) {
+          throw new Error('El producto no pertenece a la tienda actual.');
+        }
+        const nuevoStock = movForm.tipo === 'ENTRADA'
+          ? productoActual.stock + cantidadNum
+          : productoActual.stock - cantidadNum;
+        if (nuevoStock < 0) {
+          throw new Error('No hay existencias suficientes para esa salida.');
+        }
+        await db.productos.update(productoActual.id, {
+          stock: nuevoStock,
+          syncStatus: 0
+        });
+        await db.operacionesInventario.add({
+          id: crypto.randomUUID(),
+          tiendaId,
+          productoId: productoActual.id,
+          tipo: movForm.tipo,
+          cantidad: cantidadNum,
+          stockAnterior: productoActual.stock,
+          stockNuevo: nuevoStock,
+          motivo: movForm.motivo.trim(),
+          fecha: new Date().toISOString(),
+          syncStatus: 0
+        });
+        await db.movimientos.add({
+          id: crypto.randomUUID(),
+          tiendaId,
+          productoId: productoActual.id,
+          tipo: movForm.tipo,
+          cantidad: cantidadNum,
+          fecha: new Date().toISOString(),
+          motivo: movForm.motivo.trim()
+        });
+        stockActualizado = { ...productoActual, stock: nuevoStock };
+      });
+    } catch (error) {
+      window.alert(error.message || 'No se pudo modificar el stock.');
+      return;
+    }
+
+    if (stockActualizado.stock <= stockActualizado.stockMinimo) {
+      triggerLowStockNotification(stockActualizado);
+    }
     setShowMovementModal(false);
     setSelectedProduct(null);
   };
 
-  const handleEliminarProducto = async (producto) => {
-    if (!confirm(`¿Eliminar "${producto.nombre}" del inventario?`)) return;
-    await db.productos.delete(producto.id);
-    try {
-      await fetch(`/api/v1/productos/${producto.id}`, { method: 'DELETE' });
-    } catch {}
+  // Se deshabilita temporalmente para no perder eliminaciones offline ni
+  // desincronizar el inventario local del inventario de D1.
+  const handleEliminarProducto = () => {
+    window.alert('La eliminación está temporalmente deshabilitada hasta implementar la cola de sincronización de productos.');
   };
 
   const filtered = productos.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.codigoBarras.includes(searchTerm));

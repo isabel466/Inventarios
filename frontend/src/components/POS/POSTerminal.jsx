@@ -20,11 +20,32 @@ import {
 } from 'lucide-react';
 
 export default function POSTerminal() {
-  const { user } = useAuth();
-  
-  // Reactividad en tiempo real con IndexedDB mediante Dexie hooks
-  const productos = useLiveQuery(() => db.productos.toArray(), []) ?? [];
-  const clientes = useLiveQuery(() => db.clientes.toArray(), []) ?? [];
+
+const { user, tiendaId } = useAuth();
+
+const productos = useLiveQuery(
+  () => {
+    if (!tiendaId) return [];
+
+    return db.productos
+      .where('tiendaId')
+      .equals(tiendaId)
+      .toArray();
+  },
+  [tiendaId]
+) ?? [];
+
+const clientes = useLiveQuery(
+  () => {
+    if (!tiendaId) return [];
+
+    return db.clientes
+      .where('tiendaId')
+      .equals(tiendaId)
+      .toArray();
+  },
+  [tiendaId]
+) ?? [];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('TODAS');
