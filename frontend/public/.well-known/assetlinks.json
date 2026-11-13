@@ -1,0 +1,15 @@
+
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pos.inventario",
+      "sha256_cert_fingerprints": [
+        "16:FC:DD:8B:FF:8E:55:EF:1D:66:B3:87:2B:FC:22:4E:5A:FF:83:0E:4F:B4:0B:43:78:39:F0:67:78:FF:0A:30"
+      ]
+    }
+  }
+]
