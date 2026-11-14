@@ -106,16 +106,23 @@ const productoObj = {
 };
 
 
+    
     try {
-      const duplicado = await db.productos.where('tiendaId').equals(tiendaId)
-        .filter(p => p.codigoBarras === productoObj.codigoBarras).first();
+      const duplicado = await db.productos
+        .where('tiendaId')
+        .equals(tiendaId)
+        .filter(p => p.codigoBarras === productoObj.codigoBarras)
+        .first();
+
       if (duplicado) {
         window.alert('Esta tienda ya tiene un producto con ese código de barras.');
         return;
       }
 
+      // 1. Guardar primero en IndexedDB
       await db.transaction('rw', db.productos, db.movimientos, async () => {
         await db.productos.add(productoObj);
+
         await db.movimientos.add({
           id: crypto.randomUUID(),
           tiendaId,
@@ -127,13 +134,90 @@ const productoObj = {
         });
       });
 
+      // 2. Intentar registrar el producto en Cloudflare D1
+      try {
+        const { loadEncryptedSession } =
+          await import('../../utils/cryptoStorage.js');
+
+        const sesion = loadEncryptedSession();
+
+        if (
+          navigator.onLine &&
+          sesion?.token &&
+          sesion?.user?.tienda_id === tiendaId
+        ) {
+          const respuesta = await fetch('/api/v1/productos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${sesion.token}`
+            },
+            body: JSON.stringify({
+              ...productoObj,
+              stock: productoObj.stockInicial
+            })
+          });
+
+          if (respuesta.ok) {
+            await db.transaction(
+              'rw',
+              db.productos,
+              db.operacionesInventario,
+              async () => {
+                const actual = await db.productos.get(id);
+
+                const pendientes = await db.operacionesInventario
+                  .where('productoId')
+                  .equals(id)
+                  .filter(o => o.syncStatus === 0)
+                  .count();
+
+                if (
+                  actual &&
+                  actual.tiendaId === tiendaId &&
+                  actual.stock === productoObj.stockInicial &&
+                  pendientes === 0
+                ) {
+                  await db.productos.update(id, {
+                    syncStatus: 1
+                  });
+                }
+              }
+            );
+
+            console.log('Producto registrado en D1:', nombre);
+          } else {
+            console.warn(
+              'Producto pendiente de sincronización:',
+              respuesta.status
+            );
+          }
+        }
+      } catch (syncError) {
+        console.warn(
+          'Producto guardado localmente, sincronización pendiente:',
+          syncError
+        );
+      }
+
+      // 3. Cerrar y limpiar el formulario
       setShowAddModal(false);
-      setNewProd({ nombre: '', codigoBarras: '', categoria: 'Bebidas', precio: '', stock: '', stockMinimo: '' });
+
+      setNewProd({
+        nombre: '',
+        codigoBarras: '',
+        categoria: 'Bebidas',
+        precio: '',
+        stock: '',
+        stockMinimo: ''
+      });
+
     } catch (error) {
       console.error('Error guardando producto:', error);
       window.alert('No se pudo guardar el producto localmente.');
     }
   };
+
 
   const handleStockMovement = async (e) => {
     e.preventDefault();

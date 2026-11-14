@@ -3,8 +3,8 @@
 import { db } from '../db/db.js';
 import { loadEncryptedSession } from '../utils/cryptoStorage.js';
 
-// Estado de red para simulación desde la interfaz.
-// null = conexión real, true = online, false = offline.
+// Estado de red para simulaciÃ³n desde la interfaz.
+// null = conexiÃ³n real, true = online, false = offline.
 let simulatedNetworkStatus = null;
 
 export function setSimulatedNetworkStatus(status) {
@@ -20,7 +20,7 @@ export function getIsOnline() {
 }
 
 /**
- * Notificación de existencias bajas.
+ * NotificaciÃ³n de existencias bajas.
  */
 export function triggerLowStockNotification(producto) {
   if (
@@ -39,9 +39,9 @@ export function triggerLowStockNotification(producto) {
  * Registrar una venta local en IndexedDB.
  *
  * Cada venta, detalle y movimiento pertenece a una tienda.
- * syncStatus = 0 significa pendiente de sincronización.
+ * syncStatus = 0 significa pendiente de sincronizaciÃ³n.
  *
- * La sincronización con D1 está deshabilitada temporalmente.
+ * La sincronizaciÃ³n con D1 estÃ¡ deshabilitada temporalmente.
  */
 export async function registrarVentaLocal(
   itemsVenta,
@@ -93,7 +93,7 @@ export async function registrarVentaLocal(
             item.cantidad <= 0
           ) {
             throw new Error(
-              'El carrito contiene cantidades inválidas.'
+              'El carrito contiene cantidades invÃ¡lidas.'
             );
           }
 
@@ -104,7 +104,7 @@ export async function registrarVentaLocal(
             cantidadAnterior + item.cantidad;
 
           if (!Number.isSafeInteger(cantidadTotal)) {
-            throw new Error('Cantidad de producto inválida.');
+            throw new Error('Cantidad de producto invÃ¡lida.');
           }
 
           cantidadesPorProducto.set(
@@ -141,7 +141,7 @@ export async function registrarVentaLocal(
             producto.precio < 0
           ) {
             throw new Error(
-              `Precio inválido: ${producto.nombre}`
+              `Precio invÃ¡lido: ${producto.nombre}`
             );
           }
 
@@ -164,7 +164,7 @@ export async function registrarVentaLocal(
             Math.round(totalFinal * 100)
           )
         ) {
-          throw new Error('Total de venta inválido.');
+          throw new Error('Total de venta invÃ¡lido.');
         }
 
         // Guardar cabecera de venta.
@@ -221,13 +221,13 @@ export async function registrarVentaLocal(
       }
     );
 
-    // Mostrar notificaciones fuera de la transacción.
+    // Mostrar notificaciones fuera de la transacciÃ³n.
     for (const producto of alertasStock) {
       try {
         triggerLowStockNotification(producto);
       } catch (error) {
         console.warn(
-          'No se pudo mostrar la notificación:',
+          'No se pudo mostrar la notificaciÃ³n:',
           error
         );
       }
@@ -238,8 +238,8 @@ export async function registrarVentaLocal(
       ventaId
     );
 
-    // No realizar envío automático todavía.
-    // El backend de ventas aún no está terminado.
+    // No realizar envÃ­o automÃ¡tico todavÃ­a.
+    // El backend de ventas aÃºn no estÃ¡ terminado.
     return {
       success: true,
       ventaId,
@@ -260,8 +260,8 @@ export async function registrarVentaLocal(
  * Consultar ventas pendientes de la tienda autenticada.
  *
  * IMPORTANTE:
- * El envío a Cloudflare D1 está temporalmente deshabilitado.
- * No modificar syncStatus hasta recibir confirmación real.
+ * El envÃ­o a Cloudflare D1 estÃ¡ temporalmente deshabilitado.
+ * No modificar syncStatus hasta recibir confirmaciÃ³n real.
  */
 export async function sincronizarVentasPendientes() {
   const session = loadEncryptedSession();
@@ -273,7 +273,7 @@ export async function sincronizarVentasPendientes() {
     return {
       status: 'unauthorized',
       count: 0,
-      message: 'Inicia sesión para sincronizar ventas.'
+      message: 'Inicia sesiÃ³n para sincronizar ventas.'
     };
   }
 
@@ -299,8 +299,8 @@ export async function sincronizarVentasPendientes() {
     };
   }
 
-  // La sincronización real se activará cuando el endpoint
-  // /api/v1/sincronizar-ventas esté implementado y probado.
+  // La sincronizaciÃ³n real se activarÃ¡ cuando el endpoint
+  // /api/v1/sincronizar-ventas estÃ© implementado y probado.
   console.log(
     `Hay ${ventasPendientes.length} ventas pendientes de la tienda actual.`
   );
@@ -309,23 +309,31 @@ export async function sincronizarVentasPendientes() {
     status: 'pending',
     count: ventasPendientes.length,
     message:
-      'Las ventas están guardadas localmente. ' +
-      'La sincronización con Cloudflare D1 todavía está deshabilitada.'
+      'Las ventas estÃ¡n guardadas localmente. ' +
+      'La sincronizaciÃ³n con Cloudflare D1 todavÃ­a estÃ¡ deshabilitada.'
   };
 }
 
 /**
- * Escuchar cambios de conexión.
+ * Escuchar cambios de conexiÃ³n.
  */
 export function initSyncListeners(onStatusChange) {
   const handleOnline = async () => {
-    console.log('Conexión restablecida.');
+    console.log('ConexiÃ³n restablecida.');
 
     if (onStatusChange) {
       onStatusChange(true);
     }
 
-    // Solo consulta la cola; todavía no envía ventas.
+    // Sincronizar productos pendientes al recuperar internet.
+    try {
+      const resultado = await sincronizarProductosPendientes();
+      console.log('Sincronización automática de productos:', resultado);
+    } catch (error) {
+      console.error('Error sincronizando productos:', error);
+    }
+
+    // Solo consulta la cola; todavÃ­a no envÃ­a ventas.
     try {
       await sincronizarVentasPendientes();
     } catch (error) {
@@ -338,7 +346,7 @@ export function initSyncListeners(onStatusChange) {
 
   const handleOffline = () => {
     console.log(
-      'Sin conexión. Los datos permanecen en IndexedDB.'
+      'Sin conexiÃ³n. Los datos permanecen en IndexedDB.'
     );
 
     if (onStatusChange) {
@@ -357,10 +365,10 @@ export function initSyncListeners(onStatusChange) {
 
 
 /**
- * Sincronización MANUAL de ajustes de inventario.
+ * SincronizaciÃ³n MANUAL de ajustes de inventario.
  *
  * Solo para pruebas locales.
- * No se ejecuta automáticamente.
+ * No se ejecuta automÃ¡ticamente.
  * No sincroniza ventas.
  */
 let sincronizandoInventario = false;
@@ -370,11 +378,11 @@ export async function sincronizarOperacionesInventario() {
     return {
       status: 'busy',
       count: 0,
-      message: 'Ya existe una sincronización en curso.'
+      message: 'Ya existe una sincronizaciÃ³n en curso.'
     };
   }
 
-  // Evitar pruebas accidentales contra producción.
+  // Evitar pruebas accidentales contra producciÃ³n.
   if (!['localhost', '127.0.0.1'].includes(window.location.hostname)) {
     return {
       status: 'disabled',
@@ -387,7 +395,7 @@ export async function sincronizarOperacionesInventario() {
     return {
       status: 'offline',
       count: 0,
-      message: 'No hay conexión.'
+      message: 'No hay conexiÃ³n.'
     };
   }
 
@@ -399,7 +407,7 @@ export async function sincronizarOperacionesInventario() {
     return {
       status: 'unauthorized',
       count: 0,
-      message: 'Debes iniciar sesión.'
+      message: 'Debes iniciar sesiÃ³n.'
     };
   }
 
@@ -426,8 +434,8 @@ export async function sincronizarOperacionesInventario() {
       };
     }
 
-    // Protección temporal: no mezclar ajustes y ventas
-    // hasta implementar su sincronización cronológica.
+    // ProtecciÃ³n temporal: no mezclar ajustes y ventas
+    // hasta implementar su sincronizaciÃ³n cronolÃ³gica.
     const ventasPendientes = await db.ventas
       .where('tiendaId')
       .equals(tiendaId)
@@ -455,7 +463,7 @@ export async function sincronizarOperacionesInventario() {
         status: 'error',
         count: 0,
         httpStatus: respuestaProductos.status,
-        message: 'No se pudo consultar el catálogo remoto.'
+        message: 'No se pudo consultar el catÃ¡logo remoto.'
       };
     }
 
@@ -465,7 +473,7 @@ export async function sincronizarOperacionesInventario() {
       return {
         status: 'error',
         count: 0,
-        message: 'Respuesta remota inválida.'
+        message: 'Respuesta remota invÃ¡lida.'
       };
     }
 
@@ -482,7 +490,7 @@ export async function sincronizarOperacionesInventario() {
     }
 
     for (const operacion of pendientes) {
-      // Comprobar que sigue activa la misma sesión.
+      // Comprobar que sigue activa la misma sesiÃ³n.
       const sesionActual = loadEncryptedSession();
 
       if (
@@ -492,7 +500,7 @@ export async function sincronizarOperacionesInventario() {
         return {
           status: 'unauthorized',
           count: confirmadas,
-          message: 'La sesión cambió.'
+          message: 'La sesiÃ³n cambiÃ³.'
         };
       }
 
@@ -525,7 +533,7 @@ export async function sincronizarOperacionesInventario() {
           count: confirmadas,
           httpStatus: respuesta.status,
           operationId: operacion.id,
-          message: 'El envío se detuvo. Las operaciones restantes siguen pendientes.'
+          message: 'El envÃ­o se detuvo. Las operaciones restantes siguen pendientes.'
         };
       }
 
@@ -540,7 +548,7 @@ export async function sincronizarOperacionesInventario() {
         return {
           status: 'error',
           count: confirmadas,
-          message: 'D1 no confirmó el identificador de la operación.'
+          message: 'D1 no confirmÃ³ el identificador de la operaciÃ³n.'
         };
       }
 
@@ -553,11 +561,11 @@ export async function sincronizarOperacionesInventario() {
         return {
           status: 'unauthorized',
           count: confirmadas,
-          message: 'La sesión cambió antes de guardar la confirmación.'
+          message: 'La sesiÃ³n cambiÃ³ antes de guardar la confirmaciÃ³n.'
         };
       }
 
-      // Actualizar únicamente el registro confirmado.
+      // Actualizar Ãºnicamente el registro confirmado.
       await db.transaction(
         'rw',
         db.operacionesInventario,
@@ -600,4 +608,146 @@ export async function sincronizarOperacionesInventario() {
   }
 }
 
+/**
+ * Sincronizar productos pendientes con Cloudflare D1.
+ * Conserva el identificador y el stock inicial.
+ */
+let sincronizandoProductos = false;
 
+export async function sincronizarProductosPendientes() {
+  if (sincronizandoProductos) {
+    return { ok: false, motivo: 'SincronizaciÃ³n en curso' };
+  }
+
+  // Por ahora, solo permitir pruebas con la API local.
+  if (!['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    return { ok: false, motivo: 'Solo disponible en desarrollo local' };
+  }
+
+  const sesion = loadEncryptedSession();
+  const tiendaId = sesion?.user?.tienda_id;
+
+  if (!sesion?.token || !tiendaId) {
+    return { ok: false, motivo: 'No hay sesiÃ³n activa' };
+  }
+
+  if (!navigator.onLine || !getIsOnline()) {
+    return { ok: false, motivo: 'Sin conexiÃ³n' };
+  }
+
+  sincronizandoProductos = true;
+
+  try {
+    // No sincronizar productos mientras existan ventas
+    // locales pendientes: todavÃ­a no hay sincronizaciÃ³n
+    // segura de ventas.
+    const ventasPendientes = await db.ventas
+      .where('tiendaId')
+      .equals(tiendaId)
+      .filter(v => v.syncStatus === 0)
+      .count();
+
+    if (ventasPendientes > 0) {
+      return {
+        ok: false,
+        motivo: 'Hay ventas pendientes de sincronizaciÃ³n'
+      };
+    }
+
+    const productos = await db.productos
+      .where('tiendaId')
+      .equals(tiendaId)
+      .filter(p => p.syncStatus === 0)
+      .toArray();
+
+    let sincronizados = 0;
+    const errores = [];
+
+    for (const producto of productos) {
+      if (
+        !producto.id ||
+        !Number.isSafeInteger(producto.stockInicial) ||
+        producto.stockInicial < 0
+      ) {
+        errores.push({
+          producto: producto.nombre,
+          motivo: 'Stock inicial o identificador invÃ¡lido'
+        });
+        continue;
+      }
+
+      try {
+        const respuesta = await fetch('/api/v1/productos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sesion.token}`
+          },
+          body: JSON.stringify({
+            ...producto,
+            stock: producto.stockInicial
+          })
+        });
+
+        if (!respuesta.ok) {
+          errores.push({
+            producto: producto.nombre,
+            http: respuesta.status
+          });
+
+          if ([401, 403].includes(respuesta.status)) {
+            break;
+          }
+
+          continue;
+        }
+
+        // El servidor confirma el producto.
+        // Los ajustes pendientes se sincronizan por separado.
+        await db.transaction(
+          'rw',
+          db.productos,
+          db.operacionesInventario,
+          async () => {
+            const actual = await db.productos.get(producto.id);
+
+            if (!actual || actual.tiendaId !== tiendaId) {
+              return;
+            }
+
+            const operacionesPendientes =
+              await db.operacionesInventario
+                .where('productoId')
+                .equals(producto.id)
+                .filter(o => o.syncStatus === 0)
+                .count();
+
+            // Si hay ajustes pendientes, conservar el
+            // estado local hasta sincronizarlos.
+            if (operacionesPendientes === 0) {
+              await db.productos.update(producto.id, {
+                syncStatus: 1
+              });
+            }
+          }
+        );
+
+        sincronizados++;
+        console.log('Producto confirmado en D1:', producto.nombre);
+      } catch (error) {
+        errores.push({
+          producto: producto.nombre,
+          motivo: error.message
+        });
+      }
+    }
+
+    return {
+      ok: errores.length === 0,
+      sincronizados,
+      errores
+    };
+  } finally {
+    sincronizandoProductos = false;
+  }
+}

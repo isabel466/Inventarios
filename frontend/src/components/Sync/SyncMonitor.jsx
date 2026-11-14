@@ -4,6 +4,8 @@ import { db, limpiarTodosLosRegistrosLocales } from '../../db/db.js';
 import { useNetwork } from '../../context/NetworkContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
+  sincronizarOperacionesInventario} from '../../services/syncService.js';
+import {
   CloudSync,
   RefreshCw,
   CheckCircle2,
@@ -55,6 +57,50 @@ const syncedSales = useLiveQuery(
   },
   [tiendaId]
 ) ?? [];
+
+
+  const operacionesPendientes = useLiveQuery(
+    () => {
+      if (!tiendaId) return [];
+
+      return db.operacionesInventario
+        .where('tiendaId')
+        .equals(tiendaId)
+        .filter(op => op.syncStatus === 0)
+        .toArray();
+    },
+    [tiendaId]
+  ) ?? [];
+
+  const [sincronizandoMovimientos, setSincronizandoMovimientos] =
+    useState(false);
+
+  const [resultadoMovimientos, setResultadoMovimientos] =
+    useState(null);
+
+  const handleSincronizarMovimientos = async () => {
+    if (sincronizandoMovimientos || !isOnline) return;
+
+    setSincronizandoMovimientos(true);
+    setResultadoMovimientos(null);
+
+    try {
+      const resultado = await sincronizarOperacionesInventario();
+      setResultadoMovimientos(resultado);
+
+      console.log('Resultado de movimientos:', resultado);
+    } catch (error) {
+      console.error('Error de sincronización:', error);
+
+      setResultadoMovimientos({
+        status: 'error',
+        count: 0,
+        message: 'No se pudieron sincronizar los movimientos.'
+      });
+    } finally {
+      setSincronizandoMovimientos(false);
+    }
+  };
 
 
   const [serverStats, setServerStats] = useState(null);
@@ -111,15 +157,49 @@ const handleLimpiarRegistros = async () => {
           </p>
         </div>
 
+        {/* BOTÓN ACTUAL: VENTAS */}
         <button
           className={`btn ${pendingSalesCount > 0 ? 'btn-primary' : 'btn-secondary'}`}
           onClick={triggerManualSync}
           disabled={isSyncing || !isOnline}
           style={{ padding: '9px 18px', fontSize: '0.875rem' }}
         >
-          <RefreshCw size={15} className={isSyncing ? 'spin-anim' : ''} />
-          <span>{isSyncing ? 'Sincronizando por lote...' : `Sincronizar Lote (${pendingSalesCount})`}</span>
+          <RefreshCw
+            size={15}
+            className={isSyncing ? 'spin-anim' : ''}
+          />
+          <span>
+            {isSyncing
+              ? 'Sincronizando por lote...'
+              : `Sincronizar Lote (${pendingSalesCount})`}
+          </span>
         </button>
+
+        {/* BOTÓN NUEVO: INVENTARIO */}
+        <button
+          className="btn btn-primary"
+          onClick={handleSincronizarMovimientos}
+          disabled={
+            sincronizandoMovimientos ||
+            !isOnline ||
+            !tiendaId ||
+            !['admin', 'almacen'].includes(user?.role) ||
+            operacionesPendientes.length === 0 ||
+            pendingSales.length > 0
+          }
+          style={{ padding: '9px 18px', fontSize: '0.875rem' }}
+        >
+          <RefreshCw
+            size={15}
+            className={sincronizandoMovimientos ? 'spin-anim' : ''}
+          />
+          <span>
+            {sincronizandoMovimientos
+              ? 'Sincronizando movimientos...'
+              : `Sincronizar Inventario (${operacionesPendientes.length})`}
+          </span>
+        </button>
+
       </div>
 
       {/* STATUS TARJETAS SERVIDOR Y RESUMEN */}

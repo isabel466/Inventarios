@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db.js';
-import { sincronizarVentasPendientes, setSimulatedNetworkStatus, getIsOnline, initSyncListeners } from '../services/syncService.js';
-
+import {
+  sincronizarVentasPendientes,
+  sincronizarProductosPendientes,
+  setSimulatedNetworkStatus,
+  getIsOnline,
+  initSyncListeners
+} from '../services/syncService.js';
 const NetworkContext = createContext();
 
 export const NetworkProvider = ({ children }) => {
@@ -20,18 +25,45 @@ export const NetworkProvider = ({ children }) => {
 
   const currentOnlineState = getIsOnline();
 
-  useEffect(() => {
-    // Pedir permiso de notificaciones nativas al cargar
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
+
+useEffect(() => {
+  if ('Notification' in window) {
+    setNotificationPermission(Notification.permission);
+  }
+
+  // Mantener los eventos online/offline existentes.
+  const cleanup = initSyncListeners((onlineStatus) => {
+    setRealOnline(onlineStatus);
+  });
+
+  // Revisar productos pendientes al iniciar la aplicación.
+  // No sincroniza ventas ni ajustes de stock.
+  const verificarProductosPendientes = async () => {
+    if (!navigator.onLine || !getIsOnline()) {
+      console.log('Sin conexión: productos pendientes conservados.');
+      return;
     }
 
-    const cleanup = initSyncListeners((onlineStatus) => {
-      setRealOnline(onlineStatus);
-    });
+    try {
+      const resultado = await sincronizarProductosPendientes();
 
-    return cleanup;
-  }, []);
+      console.log(
+        'Verificación inicial de productos:',
+        resultado
+      );
+    } catch (error) {
+      console.error(
+        'Error verificando productos pendientes:',
+        error
+      );
+    }
+  };
+
+  verificarProductosPendientes();
+
+  return cleanup;
+}, []);
+
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
